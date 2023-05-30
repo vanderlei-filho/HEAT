@@ -1,0 +1,9 @@
+cluster_label: "test_cluster"
+provider: "aws"
+
+private_rsa_key_path: "/Users/vanderlei/.ssh/id_rsa"
+public_rsa_key_path: "/Users/vanderlei/.ssh/id_rsa.pub"
+public_key_name: "vanderlei@RIVET-LABS-MAC-HGMW6NW46J"
+
+master_ami: "ami-0f79feff35a0952f8"
+worker_ami: "ami-0f79feff35a0952f8"

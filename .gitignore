@@ -3,3 +3,4 @@ jacobi_ulfm
 jacobi_noft.o
 jacobi_ulfm.o
 main.o
+cluster_config.yaml
