@@ -1,4 +1,4 @@
-# Jacobi Method
+# HEAT / Jacobi Method
 
 This is a parallel MPI implementation of the iterative [Jacobi method](https://en.wikipedia.org/wiki/Jacobi_method) for solving linear systems of equations.
 
