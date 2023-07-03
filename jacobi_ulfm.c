@@ -41,7 +41,8 @@ static int app_reload_ckpt(MPI_Comm comm) {
     return 0;
 }
 
-/* world will swap between worldc[0] and worldc[1] after each respawn */
+
+// `world` will swap between `worldc[0]` and `worldc[1]` after each respawn
 static MPI_Comm worldc[2] = { MPI_COMM_NULL, MPI_COMM_NULL };
 static int worldi = 0;
 #define world (worldc[worldi])
@@ -157,9 +158,8 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
     int rc, flag, rflag, i, nc, ns, nd, crank, srank, drank;
 
  redo:
-    if( comm == MPI_COMM_NULL ) { /* am I a new process? */
-        /* I am a new spawnee, waiting for my new rank assignment
-         * it will be sent by rank 0 in the old world */
+    if( comm == MPI_COMM_NULL ) {
+        // I'm a new process
         MPI_Comm_get_parent(&icomm);
         scomm = MPI_COMM_WORLD;
         MPI_Recv(&crank, 1, MPI_INT, 0, 1, icomm, MPI_STATUS_IGNORE);
@@ -168,25 +168,21 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
             printf("Spawnee %d: crank=%d\n", srank, crank);
         }
     } else {
-        /* I am a survivor: Spawn the appropriate number
-         * of replacement processes (we check that this operation worked
-         * before we procees further) */
-        /* First: remove dead processes */
+        // I'm a survivor process
         MPIX_Comm_shrink(comm, &scomm);
         MPI_Comm_size(scomm, &ns);
         MPI_Comm_size(comm, &nc);
-        nd = nc-ns; /* number of deads */
+        nd = nc-ns;  // Number of dead processes
         if( 0 == nd ) {
-            /* Nobody was dead to start with. We are done here */
+            // Nobody was dead
             MPI_Comm_free(&scomm);
             *newcomm = comm;
             return MPI_SUCCESS;
         }
-        /* We handle failures during this function ourselves... */
+        // Set the error handler
         MPI_Comm_set_errhandler( scomm, MPI_ERRORS_RETURN );
 
-        rc = MPI_Comm_spawn(gargv[0], &gargv[1], nd, MPI_INFO_NULL,
-                            0, scomm, &icomm, MPI_ERRCODES_IGNORE);
+        rc = MPI_Comm_spawn(gargv[0], &gargv[1], nd, MPI_INFO_NULL, 0, scomm, &icomm, MPI_ERRCODES_IGNORE);
         flag = (MPI_SUCCESS == rc);
         MPIX_Comm_agree(scomm, &flag);
         if( !flag ) {
@@ -199,22 +195,20 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
             goto redo;
         }
 
-        /* remembering the former rank: we will reassign the same
-         * ranks in the new world. */
+        // remembering the former rank: we will reassign the same ranks in the new world.
         MPI_Comm_rank(comm, &crank);
         MPI_Comm_rank(scomm, &srank);
-        /* the rank 0 in the scomm comm is going to determine the
-         * ranks at which the spares need to be inserted. */
+        // The rank 0 in the `scomm` communicator is going to determine the ranks at 
+        // which the spares need to be inserted.
         if(0 == srank) {
-            /* getting the group of dead processes:
-             *   those in comm, but not in scomm are the deads */
+            // Processes in `comm` but not in `scomm` are the dead ones.
             MPI_Comm_group(comm, &cgrp);
             MPI_Comm_group(scomm, &sgrp);
             MPI_Group_difference(cgrp, sgrp, &dgrp);
-            /* Computing the rank assignment for the newly inserted spares */
+            // Computing the rank assignment for the newly inserted spares.
             for(i=0; i<nd; i++) {
                 MPI_Group_translate_ranks(dgrp, 1, &i, cgrp, &drank);
-                /* sending their new assignment to all new procs */
+                // sending their new assignment to all new procs.
                 MPI_Send(&drank, 1, MPI_INT, i, 1, icomm);
                 last_dead = drank;
             }
@@ -222,10 +216,11 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
         }
     }
 
-    /* Merge the intercomm, to reconstruct an intracomm (we check
-     * that this operation worked before we proceed further) */
+    // Merge the intercomm, to reconstruct an intracomm
     rc = MPI_Intercomm_merge(icomm, 1, &mcomm);
     rflag = flag = (MPI_SUCCESS==rc);
+
+    // Check that this operation worked before we proceed further
     MPIX_Comm_agree(scomm, &flag);
     if( MPI_COMM_WORLD != scomm ) MPI_Comm_free(&scomm);
     MPIX_Comm_agree(icomm, &rflag);
@@ -238,14 +233,14 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
         goto redo;
     }
 
-    /* Now, reorder mcomm according to original rank ordering in comm
-     * Split does the magic: removing spare processes and reordering ranks
-     * so that all surviving processes remain at their former place */
+    // Now, let's reorder `mcomm` based on its original rank ordering in `comm`. 
+    // The `MPI_Comm_split` function remove any spare processes and reorder the ranks, 
+    // ensuring that all surviving processes retain their original positions.
     rc = MPI_Comm_split(mcomm, 1, crank, newcomm);
 
-    /* Split or some of the communications above may have failed if
-     * new failures have disrupted the process: we need to
-     * make sure we succeeded at all ranks, or retry until it works. */
+    // In the case that new failures have disrupted the process, it is possible 
+    // that the `MPI_Comm_split` function or some of the communications above may have failed. 
+    // To ensure success at all ranks, we need to verify our progress or retry until it works.
     flag = (MPI_SUCCESS==rc);
     MPIX_Comm_agree(mcomm, &flag);
     MPI_Comm_free(&mcomm);
@@ -257,7 +252,7 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
         goto redo;
     }
 
-    /* restore the error handler */
+    // Restore the error handler:
     if( MPI_COMM_NULL != comm ) {
         MPI_Errhandler errh;
         MPI_Comm_get_errhandler( comm, &errh );
