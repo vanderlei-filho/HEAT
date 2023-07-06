@@ -36,4 +36,4 @@ jacobi_scr: jacobi_scr.o main.o
 clean:
 	rm -f *.o $(APPS) *~ 
 	rm -rf iter*/
-	rm -rf prefix/iter*/
+
