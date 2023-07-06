@@ -216,22 +216,10 @@ void restart(int *MB, int *NB, int *iter, TYPE** om, TYPE** nm, TYPE* matrix) {
 */
 void scr_conf(){
     SCR_Config("STORE=/dev/shm GROUP=NODE COUNT=1");
-      SCR_Config("SCR_COPY_TYPE=FILE");
-      SCR_Config("CKPT=0 INTERVAL=1 GROUP=NODE STORE=/dev/shm TYPE=XOR SET_SIZE=16");
-      SCR_Config("SCR_DEBUG=1");
-    // SCR_Config("STORE=/dev/shm GROUP=NODE COUNT=1");
-    // SCR_Config("SCR_COPY_TYPE=FILE");
-    // SCR_Config("CKPT=0 INTERVAL=1 GROUP=NODE STORE=/dev/shm TYPE=XOR SET_SIZE=16");
-    // SCR_Config("SCR_DEBUG=1");
-    // SCR_Config("SCR_CHECKPOINT_SECONDS=1");
-    // SCR_Config("SCR_ENABLE=1");
-    // SCR_Config("SCR_PREFIX=/home/gallier/Documents/internship/HEAT/prefix");
-    // SCR_Config("SCR_CHECKPOINT_DIR=/home/gallier/Documents/internship/HEAT/prefix/.scr/checkpoint");
-    // SCR_Config("SCR_MAX_CLEAN=10");
-    // SCR_Config("SCR_HALT_EXIT=1");
-    // SCR_Config("SCR_CACHE_SIZE=10");
-
-    
+    SCR_Config("SCR_COPY_TYPE=FILE");
+    SCR_Config("CKPT=0 INTERVAL=1 GROUP=NODE STORE=/dev/shm TYPE=XOR SET_SIZE=16");
+    SCR_Config("SCR_DEBUG=1");
+    SCR_Config("SCR_CHECKPOINT_INTERVAL=5");
 }
 
 
@@ -321,7 +309,7 @@ int preinit_jacobi_cpu(void)
 
 int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
-    scr_conf();
+    //scr_conf();
 
     /*Start SCR*/
     if (SCR_Init() != SCR_SUCCESS){
@@ -407,13 +395,10 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         iter++;
         /*Do a checkpoint if needed */
         int need_ckpt;
-        //SCR_Need_checkpoint(&need_ckpt);
-        //if (need_ckpt){
+        SCR_Need_checkpoint(&need_ckpt);
+        if (need_ckpt){
             checkpoint(MB, NB, iter, om, nm);
-        //}
-        int flag ;
-        SCR_Should_exit(&flag);
-        if (flag ==1) break;
+        }
 
     } while((iter < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
