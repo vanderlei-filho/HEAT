@@ -8,6 +8,7 @@
 #include <string.h>
 #include <scr.h>
 #include <sys/stat.h>
+#include <time.h>
 
 
 
@@ -321,10 +322,15 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     int i, iter = 0;
     int rank, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start, twf=0; /* timings */
+    double start, start_restart, start_checkpoint, time_restart, time_checkpoint, twf=0; /* timings */
 
     if(rank ==0) printf("begining restart scr\n");
+
+    start_restart = MPI_Wtime();
     restart(&MB, &NB, &iter, &om, &nm, matrix);
+    time_restart = MPI_Wtime()- start_restart;
+    printf("restart time : %f on rank %d\n", time_restart, rank);
+
 
     MPI_Comm ns, ew;
     MPI_Request req[8] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
@@ -397,7 +403,11 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         int need_ckpt;
         SCR_Need_checkpoint(&need_ckpt);
         if (need_ckpt){
+            start_checkpoint = MPI_Wtime();
             checkpoint(MB, NB, iter, om, nm);
+            time_checkpoint = MPI_Wtime()- start_checkpoint;
+            if(rank ==0) printf("checkpoint %d \n", iter);
+            print_timings( comm, rank, time_checkpoint );
         }
 
     } while((iter < MAX_ITER) && (sqrt(diff_norm) > epsilon));

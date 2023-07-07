@@ -5,8 +5,9 @@ MPIDIR=${HOME}/opt/mpi
 MPIINC=-I$(MPIDIR)/include
 MPILIB=-lpthread -L$(MPIDIR)/lib -lmpi
 
-LIBDIR     = -L/home/gallier/Documents/internship/SCR/scr-v3.0/install/lib -Wl,-rpath,/home/gallier/Documents/internship/SCR/scr-v3.0/install/lib -lscr
-INCLUDES   = -I/home/gallier/Documents/internship/SCR/scr-v3.0/install/include
+LIBDIR     = -L/var/nfs_dir/scr/scr-v3.0/install/lib64 -Wl,-rpath,/var/nfs_dir/scr/scr-v3.0/install/lib64 -lscr
+INCLUDES   = -I/var/nfs_dir/scr/scr-v3.0/install/include
+
 
 
 CFLAGS=-g -Wall
