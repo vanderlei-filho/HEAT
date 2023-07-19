@@ -7,6 +7,8 @@ MPILIB=-lpthread -L$(MPIDIR)/lib -lmpi
 
 LIBDIR     = -L/var/nfs_dir/scr/scr-v3.0/install/lib64 -Wl,-rpath,/var/nfs_dir/scr/scr-v3.0/install/lib64 -lscr
 INCLUDES   = -I/var/nfs_dir/scr/scr-v3.0/install/include
+#LIBDIR     = -L/home/gallier/Documents/internship/SCR/scr-v3.0/install/lib -Wl,-rpath,/home/gallier/Documents/internship/SCR/scr-v3.0/install/lib -lscr
+#INCLUDES   = -I/home/gallier/Documents/internship/SCR/scr-v3.0/install/include
 
 
 
@@ -38,3 +40,6 @@ clean:
 	rm -f *.o $(APPS) *~ 
 	rm -rf iter*/
 
+clear:
+	rm -rf iter*/
+	rm -rf .scr

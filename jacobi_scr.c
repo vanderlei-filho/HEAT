@@ -9,7 +9,7 @@
 #include <scr.h>
 #include <sys/stat.h>
 #include <time.h>
-
+#include <dirent.h>
 
 
 /**
@@ -87,6 +87,55 @@ int read_data(char *filename, int *MB, int *NB, int *iter, TYPE** om, TYPE** nm)
 
 }
 
+int remove_folder(char *path) {
+    struct dirent *entry;
+    DIR *dir = opendir(path);
+
+    if (dir == NULL) {
+        perror("opendir");
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        char entry_path[SCR_MAX_FILENAME];
+        snprintf(entry_path, SCR_MAX_FILENAME, "%s/%s", path, entry->d_name);
+
+        struct stat st;
+        if (lstat(entry_path, &st) == -1) {
+            //perror("lstat");
+            closedir(dir);
+            return -1;
+        }
+
+        if (S_ISDIR(st.st_mode)) {
+            if (remove_folder(entry_path) == -1) {
+                closedir(dir);
+                return -1;
+            }
+        } else {
+            if (remove(entry_path) == -1) {
+                //perror("remove yup");
+                closedir(dir);
+                return -1;
+            }
+        }
+    }
+
+    closedir(dir);
+
+    if (rmdir(path) == -1) {
+        perror("rmdir");
+        return -1;
+    }
+
+    return 0;
+}
+
+
 /**
  * Create a checkpoint folder with a checkpoint file for each rank.
  *
@@ -135,6 +184,12 @@ void checkpoint(int MB, int NB, int iter, TYPE* om, TYPE* nm) {
 
     /*Step 3 : define boundary of checkpoint */
     SCR_Complete_output(valid);
+
+    if (iter - 150 > 0){
+        char path[SCR_MAX_FILENAME];
+        snprintf(path, sizeof(ckpt_name), "iter.%d", iter-150 );
+        remove_folder(path);
+    }
 }
 
 /**
@@ -212,6 +267,9 @@ void restart(int *MB, int *NB, int *iter, TYPE** om, TYPE** nm, TYPE* matrix) {
 }
 
 
+
+
+
 /**
  * Parameter SCR
 */
@@ -246,8 +304,7 @@ void print_timings(MPI_Comm scomm, int rank, double twf)
     // If the current process is rank 0, print the min and max timings
     if (0 == rank) {
         printf(
-            "##### Timings #####\n"
-            "# MIN: %13.5e \t MAX: %13.5e\n",
+            "%13.5e %13.5e\n",
             mtwf, Mtwf
         );
     }
@@ -324,12 +381,12 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
     double start, start_restart, start_checkpoint, time_restart, time_checkpoint, twf=0; /* timings */
 
-    if(rank ==0) printf("begining restart scr\n");
+    //if(rank ==0) printf("begining restart scr\n");
 
     start_restart = MPI_Wtime();
     restart(&MB, &NB, &iter, &om, &nm, matrix);
     time_restart = MPI_Wtime()- start_restart;
-    printf("restart time : %f on rank %d\n", time_restart, rank);
+    printf("restart %f\n", time_restart);
 
 
     MPI_Comm ns, ew;
@@ -394,9 +451,9 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
         MPI_Allreduce(MPI_IN_PLACE, &diff_norm, 1, MPI_TYPE, MPI_SUM,
                       comm);
-        if(0 == rank) {
-            printf("Iteration %4d norm %f\n", iter, sqrtf(diff_norm));
-        }
+        // if(0 == rank) {
+        //     printf("Iteration %4d norm %f\n", iter, sqrtf(diff_norm));
+        // }
         tmpm = om; om = nm; nm = tmpm;  /* swap the 2 matrices */
         iter++;
         /*Do a checkpoint if needed */
@@ -406,7 +463,8 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
             start_checkpoint = MPI_Wtime();
             checkpoint(MB, NB, iter, om, nm);
             time_checkpoint = MPI_Wtime()- start_checkpoint;
-            if(rank ==0) printf("checkpoint %d \n", iter);
+            // if(rank ==0) printf("checkpoint %d \n", iter);
+            if(rank==0) printf("check");
             print_timings( comm, rank, time_checkpoint );
         }
 
@@ -414,6 +472,7 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
 
     twf = MPI_Wtime() - start;
+    if(rank ==0) printf("total");
     print_timings( comm, rank, twf );
 
     if(matrix != om) free(om);

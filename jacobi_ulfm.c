@@ -141,8 +141,8 @@ void print_timings(MPI_Comm scomm, int rank, double twf)
     // If the current process is rank 0, print the min and max timings
     if (0 == rank) {
         printf(
-            "##### Timings #####\n"
-            "# MIN: %13.5e \t MAX: %13.5e\n",
+            //"##### Timings #####\n"
+            "%13.5e %13.5e\n",
             mtwf, Mtwf
         );
     }
@@ -165,7 +165,7 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
         MPI_Recv(&crank, 1, MPI_INT, 0, 1, icomm, MPI_STATUS_IGNORE);
         if( verbose ) {
             MPI_Comm_rank(scomm, &srank);
-            printf("Spawnee %d: crank=%d\n", srank, crank);
+            //printf("Spawnee %d: crank=%d\n", srank, crank);
         }
     } else {
         /* I am a survivor: Spawn the appropriate number
@@ -263,7 +263,7 @@ static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm)
         MPI_Comm_get_errhandler( comm, &errh );
         MPI_Comm_set_errhandler( *newcomm, errh );
     }
-    printf("Done with the recovery (rank %d)\n", crank);
+    //printf("Done with the recovery (rank %d)\n", crank);
 
     return MPI_SUCCESS;
 }
@@ -341,14 +341,16 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     int i, is_allowed_to_kill = 1;
     int world_size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start_time, total_wf_time = 0; // timings
+    double start_time, time_check, start_check, start_restart, time_restart, total_wf_time = 0; // timings
     MPI_Errhandler errh;
     MPI_Comm parent;
     int do_recover = 0;
     MPI_Request req[8] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
                           MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
 
-    printf("Starting/resuming Jacobi method...\n");
+    //printf("Starting/resuming Jacobi method...\n");
+
+
     MPI_Comm_create_errhandler(&errhandler_respawn, &errh);
     // Check if it is a spare process
     MPI_Comm_get_parent(&parent);
@@ -367,7 +369,7 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     MPI_Comm_rank(world, &rank);
     MPI_Comm_size(world, &world_size);
-    printf("Rank %d is joining the execution at iteration %d\n", rank, iteration);
+    //printf("Rank %d is joining the execution at iteration %d\n", rank, iteration);
 
     old_matrix = matrix;
     new_matrix = (TYPE *)calloc(sizeof(TYPE), (NB + 2) * (MB + 2));
@@ -379,7 +381,12 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     // Prepare the space for the buddy checkpoint
     bckpt = (TYPE *)malloc(sizeof(TYPE) * (NB + 2) * (MB + 2));
 
+    //! debut restart
+
+
 restart: // This is the restart point
+
+    start_restart = MPI_Wtime();
     do_recover = _setjmp(stack_jmp_buf);
     // Set an errhandler on world, so that a failure is not fatal anymore
     MPI_Comm_set_errhandler(world, errh);
@@ -403,6 +410,10 @@ restart: // This is the restart point
         MPI_Wait(&req[0], MPI_STATUS_IGNORE);
         goto do_sor;
     }
+
+    time_restart = MPI_Wtime()- start_restart;
+    if (0 == rank) printf("restart %13.5e\n", time_restart);
+    //! end restart
 
     start_time = MPI_Wtime();
     do
@@ -432,9 +443,9 @@ restart: // This is the restart point
         if (0 != ew_rank)
             MPI_Isend(send_west, MB, MPI_TYPE, ew_rank - 1, 0, ew, &req[7]);
 
-        /*
+        
         // Uncomment this code block to simulate a failure using a SIGKILL
-        if (is_allowed_to_kill && (42 == iteration))
+        if (is_allowed_to_kill && (50 == iteration) )
         {
             is_allowed_to_kill = 0;
             if (1 == rank)
@@ -443,7 +454,7 @@ restart: // This is the restart point
                 raise(SIGKILL);
             }
         }
-        */
+        
 
         // Wait until they all complete
         MPI_Waitall(8, req, MPI_STATUSES_IGNORE);
@@ -453,14 +464,16 @@ restart: // This is the restart point
             old_matrix[(i + 1) * (NB + 2) + NB + 1] = recv_east[i];
         }
 
+        //! start check
         // Perform a checkpoint every CKPT_STEP iterations
         if ((0 != iteration) && (0 == (iteration % CKPT_STEP)))
         {
+            start_check = MPI_Wtime();
             // Make sure the environment is safe before initiating circular buddy checkpointing
-            if (0 == rank)
-            {
-                printf("Initiate circular buddy checkpointing\n");
-            }
+            // if (0 == rank)
+            // {
+            //     printf("Initiate circular buddy checkpointing\n");
+            // }
 
             // Receive the checkpoint data from the previous process
             MPI_Irecv(bckpt, (NB + 2) * (MB + 2), MPI_TYPE, (rank - 1 + world_size) % world_size, 111, world, &req[0]);
@@ -473,7 +486,12 @@ restart: // This is the restart point
 
             // Update the checkpoint iteration
             ckpt_iteration = iteration;
+            time_check = MPI_Wtime()- start_check;
+            if (rank == 0) printf("check %13.5e\n", time_check);
         }
+
+
+        //! end check
 
         // Label for restarting the computation after recovery
         do_sor:
