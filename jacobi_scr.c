@@ -88,6 +88,7 @@ int read_data(char *filename, int *MB, int *NB, int *iter, TYPE** om, TYPE** nm)
 }
 
 int remove_folder(char *path) {
+    //printf("path : %s\n", path);
     struct dirent *entry;
     DIR *dir = opendir(path);
 
@@ -185,9 +186,9 @@ void checkpoint(int MB, int NB, int iter, TYPE* om, TYPE* nm) {
     /*Step 3 : define boundary of checkpoint */
     SCR_Complete_output(valid);
 
-    if (iter - 150 > 0){
+    if (iter - 400 > 0){
         char path[SCR_MAX_FILENAME];
-        snprintf(path, sizeof(ckpt_name), "iter.%d", iter-150 );
+        snprintf(path, sizeof(ckpt_name), "iter.%d", iter-400 );
         remove_folder(path);
     }
 }
@@ -370,6 +371,11 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     //scr_conf();
 
     /*Start SCR*/
+    clock_t init_time, end_init_time;
+    double cpu_time_used;
+
+    init_time = clock();
+
     if (SCR_Init() != SCR_SUCCESS){
         printf("Failed initializing SCR\n");
         return 1;
@@ -379,7 +385,7 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     int i, iter = 0;
     int rank, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start, start_restart, start_checkpoint, time_restart, time_checkpoint, twf=0; /* timings */
+    double start, start_restart, start_checkpoint, time_restart, time_checkpoint, time_need_checkpoint, start_need_checkpoint, twf=0; /* timings */
 
     //if(rank ==0) printf("begining restart scr\n");
 
@@ -410,8 +416,16 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_size(ew, &ew_size);
     MPI_Comm_rank(ew, &ew_rank);
 
-    start = MPI_Wtime();
+    end_init_time = clock();
+    cpu_time_used = ((double) (end_init_time - init_time)) / CLOCKS_PER_SEC;
+
+        // Print the result
+    if(rank==0) printf("init_jacobi %f\n", cpu_time_used);
+
     do {
+        clock_t start_time, end_time;
+
+        start_time = clock();
         /* post receives from the neighbors */
         if( 0 != ns_rank )
             MPI_Irecv( RECV_NORTH(om), NB, MPI_TYPE, ns_rank - 1, 0, ns, &req[0]);
@@ -457,9 +471,15 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         tmpm = om; om = nm; nm = tmpm;  /* swap the 2 matrices */
         iter++;
         /*Do a checkpoint if needed */
-        int need_ckpt;
-        SCR_Need_checkpoint(&need_ckpt);
-        if (need_ckpt){
+        //int need_ckpt;
+        //start_need_checkpoint = MPI_Wtime();
+
+        //SCR_Need_checkpoint(&need_ckpt);
+        //time_need_checkpoint = MPI_Wtime()- start_need_checkpoint;
+        //if(rank==0) printf("need_check %f\n", time_need_checkpoint);
+
+
+        if (iter%400 ==0 && iter >0 ){
             start_checkpoint = MPI_Wtime();
             checkpoint(MB, NB, iter, om, nm);
             time_checkpoint = MPI_Wtime()- start_checkpoint;
@@ -467,13 +487,15 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
             if(rank==0) printf("check");
             print_timings( comm, rank, time_checkpoint );
         }
+        end_time = clock();
+        cpu_time_used = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+
+        // Print the result
+        if(rank==0) printf("jacobi_time %f\n", cpu_time_used);
 
     } while((iter < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
 
-    twf = MPI_Wtime() - start;
-    if(rank ==0) printf("total");
-    print_timings( comm, rank, twf );
 
     if(matrix != om) free(om);
     else free(nm);
@@ -488,6 +510,7 @@ int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     /*close SCR*/
     
     SCR_Finalize();
+
 
     return iter;
 }

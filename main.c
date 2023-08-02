@@ -85,6 +85,11 @@ int init_matrix(TYPE* matrix, const TYPE* border, int nb, int mb)
  */
 int main(int argc, char* argv[])
 {
+    clock_t start_time, end_time;
+    double cpu_time_used;
+
+    start_time = clock();
+
     int i, rc, size, rank, NB = -1, MB = -1, P = -1, Q = -1;
     TYPE *om, *som, *border, epsilon = 1e-6;
     MPI_Comm parent;
@@ -157,6 +162,13 @@ int main(int argc, char* argv[])
 
     // Set the error handler for MPI
     MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+
+    end_time = clock();
+
+    cpu_time_used = ((double) (end_time - start_time)) / CLOCKS_PER_SEC;
+
+    // Print the result
+    if(rank ==0) printf("init_main: %f\n", cpu_time_used);
 
     // Run the Jacobi CPU solver
     rc = jacobi_cpu(om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
