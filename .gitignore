@@ -7,4 +7,3 @@ jacobi_scr.o
 main.o
 cluster_config.yaml
 .scr/
-ckpt.*/
