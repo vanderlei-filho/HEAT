@@ -8,18 +8,22 @@ To compile the SCR version of this application you'll need to install SCR (SCR 3
 
 ## Running the versions
 
-After compile with `make`, to run one of the versions:
+After compile with `make`, Examples of how to run the different versions are below.
 
 ### NOFT
+
     mpirun -np NP jacobi_noft -p NR -q NC -NB QC -MB QR
 
 ### ULFM
+
     mpirun --with-ft=ulfm --oversubscribe -np NP jacobi_ulfm -p NR -q NC -NB QC -MB QR
 
 ### SCR
+
     mpirun -np NP jacobi_scr -p NR -q NC -NB QC -MB QR
 
-### Arguments:
+### Arguments
+
     NP: Number of processes used by the application
     NR: Number of processes per row
     NC: Number of processes per column
@@ -27,4 +31,5 @@ After compile with `make`, to run one of the versions:
     QR: Number of rows
 
 ## Troubleshooting
+
 If `make jacobi_scr` isn't working, change the content of the `SCRDIR` variable to the path of your SCR installation

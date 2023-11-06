@@ -1,6 +1,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include <mpi.h>
 #include <scr.h>
 #include "jacobi.h"
@@ -9,10 +11,31 @@ static int rank = MPI_PROC_NULL;
 static int iteration = 0;
 static int verbose = 1;
 
-static int do_output = 1;
-static char output[SCR_MAX_FILENAME] = "output/result";
+// SCR query variables
+char *scr_prefix;
+int step;
 
-// ckpt step defined in .scrconf
+static int extract_final_number(char *str)
+{
+    int length = strlen(str);
+    int number = 0;
+    int multiplier = 1;
+
+    for (int i = length - 1; i >= 0; i--)
+    {
+        if (isdigit(str[i]))
+        {
+            number += (str[i] - '0') * multiplier;
+            multiplier *= 10;
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return number;
+}
 
 /**
  * Reads a checkpoint file and stores the data in the input matrix.
@@ -79,14 +102,12 @@ static int read_ch(char *file, TYPE **buf, int NB, int MB)
  * @param buf   Pointer to the pointer to the input matrix.
  * @param NB    Number of columns in the input matrix.
  * @param MB    Number of rows in the input matrix.
- * @return      -1 if a restart was not performed; otherwise, the iteration number of the checkpoint that was restarted from
  */
-static int try_restart(char *name, TYPE **buf, int NB, int MB)
+static void try_restart(char *name, TYPE **buf, int NB, int MB)
 {
-    int scr_retval, have_restart;
+    int scr_retval, have_restart, ckpt_iteration;
     int found_checkpoint = 0;
     int restarted = 0;
-    int ckpt_iteration = -1;
     char dset[SCR_MAX_FILENAME];
     char path[SCR_MAX_FILENAME];
     char file[SCR_MAX_FILENAME];
@@ -149,7 +170,8 @@ static int try_restart(char *name, TYPE **buf, int NB, int MB)
             else
             {
                 restarted = 1;
-                sscanf(dset, "ckpt.%d", &ckpt_iteration);
+                ckpt_iteration = extract_final_number(dset);
+                iteration = ckpt_iteration + 1;
                 if (0 == rank)
                 {
                     printf("Restarted from checkpoint %d\n", ckpt_iteration);
@@ -157,8 +179,6 @@ static int try_restart(char *name, TYPE **buf, int NB, int MB)
             }
         }
     } while (have_restart && !restarted);
-
-    return ckpt_iteration;
 }
 
 /**
@@ -218,6 +238,7 @@ static void write_checkpoint(char *name, TYPE *buf, int NB, int MB)
     char file[SCR_MAX_FILENAME];
 
     scr_retval = SCR_Need_checkpoint(&need_checkpoint);
+
     if (SCR_SUCCESS != scr_retval)
     {
         printf("%d: failed calling SCR_Need_checkpoint: %d: @%s:%d\n",
@@ -229,19 +250,20 @@ static void write_checkpoint(char *name, TYPE *buf, int NB, int MB)
         {
             printf("Writing checkpoint %d\n", iteration);
         }
-        snprintf(dirname, sizeof(dirname), "ckpt.%d", iteration);
+        snprintf(dirname, sizeof(dirname), "timestep.%d", iteration);
 
         scr_retval = SCR_Start_output(dirname, SCR_FLAG_CHECKPOINT);
 
         if (SCR_SUCCESS != scr_retval)
         {
-            printf("%d: failed calling SCR_Start_checkpoint(): %d: @%s:%d\n",
+            printf("%d: failed calling SCR_Start_output(): %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
         }
 
-        snprintf(path, sizeof(path), "%s/%s", dirname, name);
+        snprintf(path, sizeof(path), "%s/%s/%s", scr_prefix, dirname, name);
 
         scr_retval = SCR_Route_file(path, file);
+
         if (SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Route_file(): %d: @%s:%d\n",
@@ -255,124 +277,6 @@ static void write_checkpoint(char *name, TYPE *buf, int NB, int MB)
         {
             printf("%d: failed calling SCR_Complete_output: %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
-        }
-    }
-}
-
-/**
- * Writes a output file.
- *
- * @param file    Pointer to the full path to a output file.
- * @param result  Value to be written to the output file.
- * @return        1 if the output file was written successfully; 0 otherwise.
- */
-static int write_out(char *file, TYPE result)
-{
-    int rc, valid = 1;
-    size_t return_value;
-    FILE *pFile;
-
-    pFile = fopen(file, "w");
-    if (NULL == pFile)
-    {
-        printf("%d: Could not open file %s\n", rank, file);
-        valid = 0;
-    }
-    else
-    {
-        return_value = fwrite(&result, sizeof(TYPE), 1, pFile);
-        if (1 != return_value)
-        {
-            valid = 0;
-            printf("%d: Error writing %s\n", rank, file);
-        }
-        /* make sure the close is without error */
-        rc = fclose(pFile);
-        if (0 != rc)
-        {
-            valid = 0;
-            printf("%d: Error closing %s\n", rank, file);
-        }
-    }
-    return valid;
-}
-
-/**
- * Performs SCR checks and writes output.
- *
- * @param result  Value to be written to the output file.
- * @return        1 if the output file was written successfully; 0 otherwise.
- */
-static int write_output(TYPE result)
-{
-    int scr_retval, valid = 1;
-    char file[SCR_MAX_FILENAME];
-
-    scr_retval = SCR_Start_output(output, SCR_FLAG_OUTPUT);
-
-    if (SCR_SUCCESS != scr_retval)
-    {
-        printf("%d: failed calling SCR_Start_checkpoint(): %d: @%s:%d\n",
-               rank, scr_retval, __FILE__, __LINE__);
-        valid = 0;
-    }
-    if (0 == rank) // only rank 0 writes output
-    {
-        scr_retval = SCR_Route_file(output, file);
-        if (SCR_SUCCESS != scr_retval)
-        {
-            printf("%d: failed calling SCR_Route_file(): %d: @%s:%d\n",
-                   rank, scr_retval, __FILE__, __LINE__);
-            valid = 0;
-        }
-
-        if (valid)
-        {
-            valid = write_out(file, result);
-        }
-    }
-
-    scr_retval = SCR_Complete_output(valid);
-    if (SCR_SUCCESS != scr_retval)
-    {
-        printf("%d: failed calling SCR_Complete_output: %d: @%s:%d\n",
-               rank, scr_retval, __FILE__, __LINE__);
-        valid = 0;
-    }
-    return valid;
-}
-
-/**
- * Reads the output file and prints the result.
- */
-static void read_output(void)
-{
-    TYPE result;
-    int rc;
-    size_t return_value;
-    FILE *pFile;
-
-    pFile = fopen(output, "r");
-    if (NULL == pFile)
-    {
-        printf("%d: Could not open file %s\n", rank, output);
-    }
-    else
-    {
-        return_value = fread(&result, sizeof(TYPE), 1, pFile);
-        if (1 != return_value)
-        {
-            printf("%d: Error reading %s\n", rank, output);
-        }
-        else
-        {
-            printf("output: %lf\n", result);
-        }
-
-        rc = fclose(pFile);
-        if (0 != rc)
-        {
-            printf("%d: Error closing %s\n", rank, output);
         }
     }
 }
@@ -488,7 +392,19 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // reads from .scrconf file and initializes SCR
+    // Query SCR informations from .scrconf (SCR_Config returns a pointer)
+    // P.s.: Do not need to free the pointers, SCR frees them internally
+    // in SCR_Finalize()
+    {
+        char *pstep;
+
+        scr_prefix = (char *)SCR_Config("SCR_PREFIX");
+        pstep = (char *)SCR_Config("SCR_CHECKPOINT_INTERVAL");
+        step = atoi(pstep);
+        free(pstep);
+    }
+
+    // Initialize SCR
     if (SCR_Init() != SCR_SUCCESS)
     {
         printf("SCR_Init failed\n");
@@ -498,7 +414,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     printf("Rank %d is joining the execution at iteration %d\n", rank, iteration);
 
-    snprintf(name, sizeof(name), "p_%d", rank);
+    snprintf(name, sizeof(name), "rank_%d.ckpt", rank);
 
     old_matrix = matrix;
     new_matrix = (TYPE *)calloc(sizeof(TYPE), (NB + 2) * (MB + 2));
@@ -516,11 +432,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_size(ew, &ew_size);
     MPI_Comm_rank(ew, &ew_rank);
 
-    ckpt_iteration = try_restart(name, &old_matrix, NB, MB);
-    if (-1 != ckpt_iteration)
-    {
-        iteration = ckpt_iteration + 1;
-    }
+    try_restart(name, &old_matrix, NB, MB);
 
     start_time = MPI_Wtime();
     do
@@ -601,14 +513,6 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     print_timings(comm, rank, total_wf_time);
 
-    // Test SCR output feature
-    if (do_output) {
-        write_output(sqrtf(diff_norm));
-
-        // test function to check if the output file was written correctly
-        read_output();
-    }
-
     // Free the memory allocated for matrices and buffers
     // If the 'matrix' variable is different from 'old_matrix', free 'old_matrix'; otherwise, free 'new_matrix'
     free(matrix != old_matrix ? old_matrix : new_matrix);
@@ -623,5 +527,9 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_free(&ew);
 
     SCR_Finalize();
+
+    // free SCR query variables
+    free(scr_prefix);
+
     return iteration;
 }
