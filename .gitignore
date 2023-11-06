@@ -8,4 +8,3 @@ main.o
 cluster_config.yaml
 .scr/
 ckpt.*/
-.scrconf
