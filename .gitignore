@@ -6,4 +6,3 @@ jacobi_ulfm.o
 jacobi_scr.o
 main.o
 cluster_config.yaml
-.scr/

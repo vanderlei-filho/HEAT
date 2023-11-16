@@ -86,7 +86,7 @@ int init_matrix(TYPE* matrix, const TYPE* border, int nb, int mb)
 int main(int argc, char* argv[])
 {
     int i, rc, size, rank, NB = -1, MB = -1, P = -1, Q = -1;
-    TYPE *om, *som, *border, epsilon = 1e-6;
+    TYPE *om, *border, epsilon = 1e-6;
     MPI_Comm parent;
 
     gargv = argv;
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
     // Initialize the border, matrix, and intermediate matrix
     border = (TYPE*)malloc(sizeof(TYPE) * 2 * (NB + 2 + MB));
     om = (TYPE*)malloc(sizeof(TYPE) * (NB + 2) * (MB + 2));
-    som = (TYPE*)malloc(sizeof(TYPE) * (NB + 2) * (MB + 2));
+
     if (MPI_COMM_NULL == parent) {
         int seed = rank * NB * MB;
         srand(seed);
@@ -168,7 +168,6 @@ int main(int argc, char* argv[])
 cleanup_and_be_gone:
     // Free resources and finalize MPI
     free(om);
-    free(som);
     free(border);
 
     MPI_Finalize();
