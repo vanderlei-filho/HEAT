@@ -12,11 +12,11 @@ static int iteration = 0;
 static int verbose = 1;
 
 // SCR query variables
-char *scr_prefix;
-int step;
+static char *scr_prefix;
+static int step;
 
 // Calculate the (cumulative) execution time of SCR functions and print them at the end
-#define CKPT_DEBUG
+//#define CKPT_DEBUG
 
 // Single checkpoint for all processes or one checkpoint per process
 //#define ONE_CKPT
@@ -25,16 +25,16 @@ int step;
 //#define USE_SCR_NEED_CHECKPOINT
 
 #ifdef CKPT_DEBUG
-    double t1;
-    double t2;
-    double t_have_restart     = 0.0;
-    double t_start_restart    = 0.0;
-    double t_route_file_ch    = 0.0;
-    double t_complete_restart = 0.0;
-    double t_need_checkpoint  = 0.0;
-    double t_start_output     = 0.0;
-    double t_route_file_out   = 0.0;
-    double t_complete_output  = 0.0;
+    static double t1;
+    static double t2;
+    static double t_have_restart     = 0.0;
+    static double t_start_restart    = 0.0;
+    static double t_route_file_ch    = 0.0;
+    static double t_complete_restart = 0.0;
+    static double t_need_checkpoint  = 0.0;
+    static double t_start_output     = 0.0;
+    static double t_route_file_out   = 0.0;
+    static double t_complete_output  = 0.0;
 #endif
 
 static int extract_final_number(char *str)
