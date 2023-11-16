@@ -535,6 +535,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // Query SCR informations from .scrconf (SCR_Config returns a pointer)
+    // SCR_Finalize() will free the memory allocated for the SCR_Config variables
     {
         char *pstep;
 
@@ -690,7 +691,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         MPI_Reduce(&t_complete_output, &avg_t_complete_output, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
         avg_t_complete_output /= size;
         
-        // If the current process is rank 0, print the min and max timings
+        // If the current process is rank 0, print the avg timings
         if (0 == rank)
         {
             printf("##### Debug timings #####\n");
@@ -723,9 +724,6 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_free(&ew);
 
     SCR_Finalize();
-
-    // free SCR query variables
-    free(scr_prefix);
 
     return iteration;
 }
