@@ -19,9 +19,6 @@ static int step;
 // Calculate the (cumulative) execution time of SCR functions and print them at the end
 //#define CKPT_DEBUG
 
-// Single checkpoint for all processes or one checkpoint per process
-//#define ONE_CKPT
-
 // Use SCR_Need_checkpoint() or manual checkpoint check
 //#define USE_SCR_NEED_CHECKPOINT
 
@@ -333,7 +330,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
     #endif
 
-    if (iteration == MAX_ITER-1) // last iteration
+    if (need_checkpoint && iteration == MAX_ITER-1) // last iteration
     {
         if (0 == rank) 
         {
@@ -373,18 +370,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
             t1 = MPI_Wtime();
         #endif
 
-        #ifdef ONE_CKPT
-            if (0 == rank)
-            {
-                scr_retval = SCR_Route_file(path, file);
-            }
-            else
-            {
-                scr_retval = SCR_SUCCESS;
-            }
-        #else
-            scr_retval = SCR_Route_file(path, file);
-        #endif
+        scr_retval = SCR_Route_file(path, file);
 
         #ifdef CKPT_DEBUG
             t2 = MPI_Wtime();
@@ -397,18 +383,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
                 rank, scr_retval, __FILE__, __LINE__);
         }
 
-        #ifndef ONE_CKPT
-            valid = write_ch(file, buf, length);
-        #else
-            if (0 == rank) 
-            {
-                valid = write_ch(file, buf, NB, MB);
-            }
-            else
-            {
-                valid = 1;
-            }
-        #endif
+        valid = write_ch(file, buf, length);
 
         #ifdef CKPT_DEBUG
             t1 = MPI_Wtime();
@@ -561,11 +536,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     printf("Rank %d is joining the execution at iteration %d\n", rank, iteration);
 
-    #ifndef ONE_CKPT
-        snprintf(name, sizeof(name), "rank_%d.ckpt", rank);
-    #else
-        snprintf(name, sizeof(name), "checkpoint.ckpt");
-    #endif
+    snprintf(name, sizeof(name), "rank_%d.ckpt", rank);
 
     old_matrix = matrix;
     new_matrix = (TYPE *)calloc(sizeof(TYPE), (NB + 2) * (MB + 2));
