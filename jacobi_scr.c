@@ -7,6 +7,7 @@
 #include <scr.h>
 #include "jacobi.h"
 
+
 static int rank = MPI_PROC_NULL;
 static int iteration = 0;
 static int verbose = 1;
@@ -37,6 +38,11 @@ static int step;
     static double t_complete_output  = 0.0;
 #endif
 
+/**
+ * Extracts the final number from a string.
+ * @param str Pointer to the string.
+ * @return    The final number in the string.
+*/
 static int extract_final_number(char *str)
 {
     int length = strlen(str);
