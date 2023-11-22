@@ -26,7 +26,7 @@ jacobi_noft: jacobi_noft.o main.o
 jacobi_ulfm: jacobi_ulfm.o main.o
 	$(LINK) -o $@ $^ -lm
 
-jacobi_scr: main.o
+jacobi_scr: main_scr.o
 	$(LINK) $(SCRINCLUDES) -o $@ $@.c $^ -lm $(SCRLIBDIR)
 
 %.o: %.c jacobi.h

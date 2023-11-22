@@ -20,7 +20,10 @@ After compile with `make`, Examples of how to run the different versions are bel
 
 ### SCR
 
-    mpirun -np NP jacobi_scr -p NR -q NC -NB QC -MB QR
+    mpirun -np NP jacobi_scr -p NR -q NC -NB QC -MB QR [--debug] [--use-scr-need-checkpoint]
+    Flags:
+        --debug: Print debug information (not only SCR debug default messages)
+        --use-scr-need-checkpoint: Use SCR_Need_checkpoint to checkpoint the application
 
 ### Arguments
 
