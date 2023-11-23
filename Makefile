@@ -5,11 +5,10 @@ MPIDIR=${HOME}/opt/mpi
 MPIINC=-I$(MPIDIR)/include
 MPILIB=-lpthread -L$(MPIDIR)/lib -lmpi
 
-# change this to point to your SCR install directory
-SCRDIR=${HOME}/Downloads/scr-v3.0.1
+# The user must set SCR_ROOT to point to the SCR installation
 
-SCRLIBDIR=-L$(SCRDIR)/install/lib -Wl,-rpath,$(SCRDIR)/install/lib -lscr
-SCRINCLUDES=-I$(SCRDIR)/install/include
+SCRLIBDIR=-L$(SCR_ROOT)/install/lib -Wl,-rpath,$(SCR_ROOT)/install/lib -lscr
+SCRINCLUDES=-I$(SCR_ROOT)/install/include
 
 CFLAGS=-g -Wall
 LDFLAGS= $(MPILIB) -g

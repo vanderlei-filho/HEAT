@@ -66,6 +66,7 @@ static int extract_final_number(char *str)
 static int read_ch(char *file, TYPE **buf, int length)
 {
     int i, rc, valid = 1;
+    long size;
     size_t return_value;
     TYPE *read_buf;
     FILE *pFile;
@@ -86,16 +87,32 @@ static int read_ch(char *file, TYPE **buf, int length)
         }
         else
         {
-            return_value = fread(read_buf, sizeof(TYPE), length, pFile);
-            if (length != return_value)
+            // verify that the file is the correct size
+            fseek(pFile, 0, SEEK_END);
+            long size = ftell(pFile);
+            fseek(pFile, 0, SEEK_SET);
+            if (size != sizeof(TYPE) * length)
             {
-                printf("%d: Error reading %s\n", rank, file);
+                printf("%d: File %s is wrong size\n", rank, file);
                 valid = 0;
             }
-            else
+            if (valid)
             {
-                free(*buf);
-                *buf = read_buf;
+                // rewind to beginning of file
+                fseek(pFile, 0, SEEK_SET);
+
+                // read the file
+                return_value = fread(read_buf, sizeof(TYPE), length, pFile);
+                if (length != return_value)
+                {
+                    printf("%d: Error reading %s\n", rank, file);
+                    valid = 0;
+                }
+                else
+                {
+                    free(*buf);
+                    *buf = read_buf;
+                }
             }
             rc = fclose(pFile);
             if (0 != rc)
@@ -533,7 +550,6 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     // Query SCR informations from .scrconf (SCR_Config returns a pointer)
-    // SCR_Finalize() will free the memory allocated for the SCR_Config variables
     {
         char *pstep;
 
