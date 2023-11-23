@@ -7,8 +7,8 @@ MPILIB=-lpthread -L$(MPIDIR)/lib -lmpi
 
 # The user must set SCR_ROOT to point to the SCR installation
 
-SCRLIBDIR=-L$(SCR_ROOT)/install/lib -Wl,-rpath,$(SCR_ROOT)/install/lib -lscr
-SCRINCLUDES=-I$(SCR_ROOT)/install/include
+SCRLIBDIR=-L$(SCR_ROOT)/lib -Wl,-rpath,$(SCR_ROOT)/lib -lscr
+SCRINCLUDES=-I$(SCR_ROOT)/include
 
 CFLAGS=-g -Wall
 LDFLAGS= $(MPILIB) -g
