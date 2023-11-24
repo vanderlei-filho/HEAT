@@ -9,7 +9,6 @@
 
 extern int scr_debug;
 extern int use_scr_need_checkpoint;
-extern int return_try_restart_retval;
 
 static int rank = MPI_PROC_NULL;
 static int iteration = 0;
@@ -530,7 +529,7 @@ int preinit_jacobi_cpu(void)
  */
 int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
-    int i, size, ew_rank, ew_size, ns_rank, ns_size;
+    int restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
     double start_time, total_wf_time = 0; // timings
     char name[SCR_MAX_FILENAME];
@@ -538,11 +537,6 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
 
     MPI_Request req[8] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
                           MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
-
-    if (-1 == iteration)
-    {
-        iteration = 0; // reset iteration
-    }
 
     printf("Starting/resuming Jacobi method...\n");
 
@@ -587,23 +581,25 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     MPI_Comm_size(ew, &ew_size);
     MPI_Comm_rank(ew, &ew_rank);
 
-    if (return_try_restart_retval)
-    {
-        int retval = try_restart(name, &old_matrix, (NB + 2) * (MB + 2));
-        if (retval) // restarted successfully
-        {
-            *matrix = old_matrix; // Update the pointer to the matrix
-        }
-        else // first run
-        {
-            iteration = -1;
-        }
-        goto end;
-    }
+    restarted = try_restart(name, &old_matrix, (NB + 2) * (MB + 2));
 
     start_time = MPI_Wtime();
     do
     {
+        // print matrix for each rank
+        // if (verbose)
+        // {
+        //     printf("Rank %d matrix:\n", rank);
+        //     for (i = 0; i < MB + 2; i++)
+        //     {
+        //         for (int j = 0; j < NB + 2; j++)
+        //         {
+        //             printf("%f ", old_matrix[i * (NB + 2) + j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // }
+
         // Post receives from the neighbors
         if (0 != ns_rank)
             MPI_Irecv(RECV_NORTH(old_matrix), NB, MPI_TYPE, ns_rank - 1, 0, ns, &req[0]);
@@ -663,6 +659,20 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
         {
             printf("Iteration %4d norm %f\n", iteration, sqrtf(diff_norm));
         }
+
+        // print matrix for each rank
+        // if (verbose)
+        // {
+        //     printf("Rank %d matrix:\n", rank);
+        //     for (i = 0; i < MB + 2; i++)
+        //     {
+        //         for (int j = 0; j < NB + 2; j++)
+        //         {
+        //             printf("%f ", old_matrix[i * (NB + 2) + j]);
+        //         }
+        //         printf("\n");
+        //     }
+        // }
 
         // Swap the old and new matrices
         temp_matrix = old_matrix;
@@ -736,10 +746,19 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
         }
     }
 
-end:
     // Free the memory allocated for matrices and buffers
-    // If the 'matrix' variable is different from 'old_matrix', free 'old_matrix'; otherwise, free 'new_matrix'
-    free(*matrix != old_matrix ? old_matrix : new_matrix);
+    if (!restarted)
+    {
+        // normal execution
+        free(*matrix != old_matrix ? old_matrix : new_matrix);
+    }
+    else
+    {
+        // restarted from a checkpoint: already freed matrix in try_restart
+        free(old_matrix);
+        free(new_matrix);
+        *matrix = NULL;
+    }
 
     // Free the memory allocated for send and receive buffers
     free(send_west);

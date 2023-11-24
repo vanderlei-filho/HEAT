@@ -169,30 +169,20 @@ int main(int argc, char *argv[])
 
     // Initialize the border, matrix, and intermediate matrix
     om = (TYPE *)malloc(sizeof(TYPE) * (NB + 2) * (MB + 2));
+    border = (TYPE *)malloc(sizeof(TYPE) * 2 * (NB + 2 + MB));
 
-    // Set the error handler for MPI
-    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
-
-    return_try_restart_retval = 1;
-
-    // Run the Jacobi CPU solver
-    rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
-
-    return_try_restart_retval = 0;
-
-    if (rc > 0)
-    { // restarted successfully: om is already initialized
-        rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
-    }
-    else
-    { // first run: initialize om
-        border = (TYPE *)malloc(sizeof(TYPE) * 2 * (NB + 2 + MB));
+    if (MPI_COMM_NULL == parent)
+    {
         int seed = rank * NB * MB;
         srand(seed);
         generate_border(border, 2 * (NB + 2 + MB));
         init_matrix(om, border, NB, MB);
-        rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
     }
+
+    // Set the error handler for MPI
+    MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
+
+    rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
 
     if (rc < 0)
     {
