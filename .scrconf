@@ -38,7 +38,7 @@ SCR_SET_SIZE=4
 # Specify the prefix directory on the parallel file system where datasets should
 # be read from and written to.
 #SCR_PREFIX=$PWD
-SCR_PREFIX=/home/joao/jacobi-method/PFS
+SCR_PREFIX=$PWD/PFS
 
 # Specify number of checkpoints to keep in the prefix directory. SCR deletes 
 # older checkpoints as new checkpoints are flushed to maintain a sliding window 
@@ -70,7 +70,6 @@ SCR_CHECKPOINT_INTERVAL=10
 # Set to positive number of seconds to specify minimum time between consecutive
 # checkpoints as guided by SCR_Need_checkpoint.
 #SCR_CHECKPOINT_SECONDS=0
-#SCR_CHECKPOINT_SECONDS=10
 
 # Set to 1 to flush checkpoints to and restart from the prefix directory during 
 # SCR_Init.
