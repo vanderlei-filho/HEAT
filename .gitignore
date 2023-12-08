@@ -1,6 +1,8 @@
 jacobi_noft
 jacobi_ulfm
+jacobi_scr
 jacobi_noft.o
 jacobi_ulfm.o
+jacobi_scr.o
 main.o
 cluster_config.yaml
