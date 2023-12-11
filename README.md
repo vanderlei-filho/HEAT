@@ -4,12 +4,6 @@ This is a parallel MPI implementation of the iterative [Jacobi method](https://e
 
 To compile this application you'll need an MPI distribution with ULFM support enabled.
 
-To compile the SCR version of this application you'll need to run the following command before the `make` command:
-
-```sh
-chmod +x set_variables.sh && ./set_variables.sh
-```
-
 ## Building the versions
 
 ### Building the NOFT version
@@ -30,7 +24,7 @@ make jacobi_ulfm
 make jacobi_scr
 ```
 
-### All
+### All versions
 
 ```sh
 make all
@@ -81,4 +75,4 @@ make clean
 
 ## Troubleshooting
 
-If `make jacobi_scr` isn't working, change the content of the `SCRDIR` variable to the path of your SCR installation
+If `make jacobi_scr` isn't working, make sure you have the `SCR_ROOT` environment variables set to the SCR installation directory.
