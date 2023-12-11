@@ -64,63 +64,61 @@ static int extract_final_number(char *str)
  */
 static int read_ch(char *file, TYPE **buf, int length)
 {
-    int i, rc, valid = 1;
-    long size;
-    size_t return_value;
-    TYPE *read_buf;
-    FILE *pFile;
+    int valid = 1;
 
-    read_buf = (TYPE *)malloc(sizeof(TYPE) * length);
+    TYPE *read_buf = (TYPE *)malloc(sizeof(TYPE) * length);
+    FILE *pFile = fopen(file, "rb");
+
     if (NULL == read_buf)
     {
         printf("%d: Could not allocate memory for read_buf\n", rank);
         valid = 0;
     }
-    else
+    if (NULL == pFile)
     {
-        pFile = fopen(file, "rb");
-        if (NULL == pFile)
+        printf("%d: Could not open file %s\n", rank, file);
+        valid = 0;
+    }
+
+    if (valid)
+    {
+        fseek(pFile, 0, SEEK_END);
+        long size = ftell(pFile);
+        fseek(pFile, 0, SEEK_SET);
+
+        if (size != sizeof(TYPE) * length)
         {
-            printf("%d: Could not open file %s\n", rank, file);
+            printf("%d: File %s is wrong size\n", rank, file);
             valid = 0;
         }
         else
         {
-            // verify that the file is the correct size
-            fseek(pFile, 0, SEEK_END);
-            long size = ftell(pFile);
-            fseek(pFile, 0, SEEK_SET);
-            if (size != sizeof(TYPE) * length)
+            size_t return_value = fread(read_buf, sizeof(TYPE), length, pFile);
+            if (length != return_value)
             {
-                printf("%d: File %s is wrong size\n", rank, file);
-                valid = 0;
-            }
-            if (valid)
-            {
-                // rewind to beginning of file
-                fseek(pFile, 0, SEEK_SET);
-
-                // read the file
-                return_value = fread(read_buf, sizeof(TYPE), length, pFile);
-                if (length != return_value)
-                {
-                    printf("%d: Error reading %s\n", rank, file);
-                    valid = 0;
-                }
-                else
-                {
-                    free(*buf);
-                    *buf = read_buf;
-                }
-            }
-            rc = fclose(pFile);
-            if (0 != rc)
-            {
-                printf("%d: Error closing %s\n", rank, file);
+                printf("%d: Error reading %s\n", rank, file);
                 valid = 0;
             }
         }
     }
+
+    if (valid)
+    {
+        free(*buf);
+        *buf = read_buf;
+    }
+    else
+    {
+        free(read_buf);
+    }
+
+    int rc = fclose(pFile);
+    if (0 != rc && valid)
+    {
+        printf("%d: Error closing %s\n", rank, file);
+        valid = 0;
+    }
+
     return valid;
 }
 
