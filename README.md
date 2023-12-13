@@ -30,26 +30,58 @@ make jacobi_scr
 make all
 ```
 
+## Configuring a file with flags
+
+To use flags with the application, you can use the `flags.conf` file and pass it as an argument when running the application. Here is an example of how the `flags.conf` file can be structured:
+
+```sh
+# Number of processes
+-np 4
+# Number of processes per row
+-p 2
+# Number of processes per column
+-q 2
+# Number of columns
+-NB 1024
+# Number of rows
+-MB 1024
+### For SCR version ###
+# Debug
+--debug
+# Use SCR_Need_checkpoint
+--use-scr-need-checkpoint
+```
+
+Use the `execute.sh` script to run the application with a flag file.
+
 ## Running the versions
 
 After compile with `make`, Examples of how to run the different versions are below.
 
-### Running the NOFT version
+### Running with execute.sh
 
 ```sh
-mpirun -np NP jacobi_noft -p NR -q NC -NB QC -MB QR
+./execute.sh <binary> [-f <flag_file> | -np <NP> -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--debug] [--use-scr-need-checkpoint]]
 ```
 
-### Running the ULFM version
+### Running manually
+
+#### Running the NOFT version
 
 ```sh
-mpirun --with-ft=ulfm --oversubscribe -np NP jacobi_ulfm -p NR -q NC -NB QC -MB QR
+mpirun -np <NP> jacobi_noft -p <NR> -q <NC> -NB <QC> [-MB <QR>]
 ```
 
-### Running the SCR version
+#### Running the ULFM version
 
 ```sh
-mpirun -np NP jacobi_scr -p NR -q NC -NB QC -MB QR [--debug] [--use-scr-need-checkpoint]
+mpirun --with-ft=ulfm --oversubscribe -np <NP> jacobi_ulfm -p <NR> -q <NC> -NB <QC> [-MB <QR>]
+```
+
+#### Running the SCR version
+
+```sh
+mpirun -np <NP> jacobi_scr -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--debug] [--use-scr-need-checkpoint]
 ```
 
 Flags:
@@ -59,6 +91,8 @@ Flags:
 
 ### Arguments
 
+- binary: Binary to be executed (jacobi_noft, jacobi_ulfm or jacobi_scr if compiled with `make`)
+- flag_file: File with the flags to be used by the application
 - NP: Number of processes used by the application
 - NR: Number of processes per row
 - NC: Number of processes per column
