@@ -32,26 +32,7 @@ make all
 
 ## Configuring a file with flags
 
-To use flags with the application, you can use the `flags.conf` file and pass it as an argument when running the application. Here is an example of how the `flags.conf` file can be structured:
-
-```sh
-# Number of processes
--np 4
-# Number of processes per row
--p 2
-# Number of processes per column
--q 2
-# Number of columns
--NB 1024
-# Number of rows
--MB 1024
-### For SCR version ###
-# Debug
---debug
-# Use SCR_Need_checkpoint
---use-scr-need-checkpoint
-```
-
+To use flags with the application, you can use the `flags.conf` file and pass it as an argument when running the application. A basic set of flags is already in the file, but you can change them as you wish.
 Use the `execute.sh` script to run the application with a flag file.
 
 ## Running the versions
@@ -59,9 +40,10 @@ Use the `execute.sh` script to run the application with a flag file.
 After compile with `make`, Examples of how to run the different versions are below.
 
 ### Running with execute.sh
+There is a script to run the application that enables the use of a flag file and other options. The script is `execute.sh` and it is located in the root directory of the project. To run the application with the script, use the following command:
 
 ```sh
-./execute.sh <binary> [-f <flag_file> | -np <NP> -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--debug] [--use-scr-need-checkpoint]]
+./execute.sh <binary> < -f <flag_file> | -np <NP> -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--hostfile=<hostfile>] [--debug] [--use-scr-need-checkpoint] [--run-until-success] [--retry-delay <delay_time>] >
 ```
 
 ### Running manually
@@ -88,6 +70,8 @@ Flags:
 
 - --debug: Print debug information (not only SCR debug default messages)
 - --use-scr-need-checkpoint: Use SCR_Need_checkpoint to checkpoint the application
+- --run-until-success (only for jacobi_scr) If specified, run the command until it returns 0  (caution: this may cause an infinite loop)
+- --retry-delay <delay_time> (only if --run-until-success is specified) Delay time in seconds between retries. Default: 1 second.
 
 ### Arguments
 
@@ -98,6 +82,7 @@ Flags:
 - NC: Number of processes per column
 - QC: Number of columns
 - QR: Number of rows
+- hostfile: Hostfile for mpirun
 
 ## Cleaning
 
