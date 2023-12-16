@@ -106,7 +106,7 @@ process_flags_from_file() {
             run_until_success=true
             ;;
         --retry-delay)
-            delay_time=$2
+            delay_time=$value
             ;;
         *)
             unknown_flags+=("$flag")
@@ -143,18 +143,18 @@ construct_command() {
         command+=" -MB $qr"
     fi
 
-    if [ "$debug" ]; then
+    if [ "$debug" = "true" ]; then
         command+=" --debug"
     fi
 
-    if [ "$use_scr_need_checkpoint" ]; then
+    if [ "$use_scr_need_checkpoint" = "true" ]; then
         command+=" --use-scr-need-checkpoint"
     fi
 }
 
 # Execute the command until it returns 0
 run_command() {
-    if [ "$run_until_success" ]; then
+    if [ "$run_until_success" = "false" ]; then
         $command
     else
         while true; do
@@ -262,6 +262,7 @@ else
             shift
             ;;
         --retry-delay)
+            echo "delay_time: $2"
             delay_time=$2
             shift
             shift
@@ -288,4 +289,4 @@ else
 fi
 
 construct_command
-run_command "$binary" "$np" "$nr" "$nc" "$qc" "$qr" "$hostfile" "$debug" "$use_scr_need_checkpoint" "$run_until_success" "$delay_time" "$extra_args"
+run_command
