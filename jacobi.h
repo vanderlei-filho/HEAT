@@ -6,7 +6,7 @@
 #define TYPE       double
 #define MPI_TYPE   MPI_DOUBLE
 
-#define MAX_ITER 67
+#define MAX_ITER 500
 
 /**
  * Helper macros to compute the displacement of the
