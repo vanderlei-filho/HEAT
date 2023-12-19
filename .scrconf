@@ -15,9 +15,14 @@ SCR_COPY_TYPE=FILE
 # Set to 0 to disable cache rebuild during SCR_Init.
 #SCR_DISTRIBUTE=1
 
+# Set to 0 to disable SCR from fetching files from the parallel file system 
+# during SCR_Init.
+#SCR_FETCH=1
+
 # Specify the number of checkpoints between periodic flushes to the parallel
 # file system. Set to 0 to disable periodic flushes.
 #SCR_FLUSH=10
+SCR_FLUSH=3
 
 # enable asynchronous flush.
 #SCR_FLUSH_ASYNC=0
@@ -25,11 +30,11 @@ SCR_FLUSH_ASYNC=1
 
 # flush transfer method (SYNC, PTHREAD, BBAPI, or DATAWARP)
 #SCR_FLUSH_TYPE=SYNC
+SCR_FLUSH_TYPE=PTHREAD
 
 # maximum number of times the scr_srun command should attempt to run a job
 # within an allocation. Set to -1 to specify an unlimited number of times.
 #SCR_RUNS=1
-#SCR_RUNS=-1
 
 # Specify the minimum number of processes to include in an redundancy set. So
 # long as there are sufficient failure groups, each redundancy set will be at
@@ -71,12 +76,11 @@ SCR_CACHE_BYPASS=0
 #Set to positive number of times SCR_Need_checkpoint should be called before
 # returning 1.
 #SCR_CHECKPOINT_INTERVAL=0
-SCR_CHECKPOINT_INTERVAL=100
+SCR_CHECKPOINT_INTERVAL=20
 
 # Set to positive number of seconds to specify minimum time between consecutive
 # checkpoints as guided by SCR_Need_checkpoint.
 #SCR_CHECKPOINT_SECONDS=0
-SCR_CHECKPOINT_SECONDS=300 # 5 minutes
 
 # Set to 1 to flush checkpoints to and restart from the prefix directory during
 # SCR_Init.
