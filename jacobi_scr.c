@@ -101,7 +101,7 @@ static int read_ch(char *file, TYPE *buf, int length)
         //         valid = 0;
         //     }
         // }
-        size_t return_value = fread(buf, sizeof(TYPE), length, pFile);
+        fread(buf, sizeof(TYPE), length, pFile);
     }
 
     // commented because of the assumption above
