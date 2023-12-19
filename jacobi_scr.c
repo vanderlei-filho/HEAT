@@ -58,69 +58,65 @@ static int extract_final_number(char *str)
  * Reads a checkpoint file and stores the data in the input buffer.
  *
  * @param file   Pointer to the full path to a checkpoint file.
- * @param buf    Pointer to the pointer to the input buffer.
+ * @param buf    Pointer to the input buffer.
  * @param length Quantity of elements in the input buffer.
  * @return       1 if the checkpoint file was read successfully; 0 otherwise.
  */
-static int read_ch(char *file, TYPE **buf, int length)
+static int read_ch(char *file, TYPE *buf, int length)
 {
-    int i, rc, valid = 1;
-    long size;
-    size_t return_value;
-    TYPE *read_buf;
-    FILE *pFile;
+    int valid = 1;
 
-    read_buf = (TYPE *)malloc(sizeof(TYPE) * length);
+    TYPE *read_buf = (TYPE *)malloc(sizeof(TYPE) * length);
+    FILE *pFile = fopen(file, "rb");
+
     if (NULL == read_buf)
     {
         printf("%d: Could not allocate memory for read_buf\n", rank);
         valid = 0;
     }
-    else
+    if (NULL == pFile)
     {
-        pFile = fopen(file, "rb");
-        if (NULL == pFile)
+        printf("%d: Could not open file %s\n", rank, file);
+        valid = 0;
+    }
+
+    if (valid)
+    {
+        fseek(pFile, 0, SEEK_END);
+        long size = ftell(pFile);
+        fseek(pFile, 0, SEEK_SET);
+
+        if (size != sizeof(TYPE) * length)
         {
-            printf("%d: Could not open file %s\n", rank, file);
+            printf("%d: File %s is wrong size\n", rank, file);
             valid = 0;
         }
         else
         {
-            // verify that the file is the correct size
-            fseek(pFile, 0, SEEK_END);
-            long size = ftell(pFile);
-            fseek(pFile, 0, SEEK_SET);
-            if (size != sizeof(TYPE) * length)
+            size_t return_value = fread(read_buf, sizeof(TYPE), length, pFile);
+            if (length != return_value)
             {
-                printf("%d: File %s is wrong size\n", rank, file);
-                valid = 0;
-            }
-            if (valid)
-            {
-                // rewind to beginning of file
-                fseek(pFile, 0, SEEK_SET);
-
-                // read the file
-                return_value = fread(read_buf, sizeof(TYPE), length, pFile);
-                if (length != return_value)
-                {
-                    printf("%d: Error reading %s\n", rank, file);
-                    valid = 0;
-                }
-                else
-                {
-                    free(*buf);
-                    *buf = read_buf;
-                }
-            }
-            rc = fclose(pFile);
-            if (0 != rc)
-            {
-                printf("%d: Error closing %s\n", rank, file);
+                printf("%d: Error reading %s\n", rank, file);
                 valid = 0;
             }
         }
     }
+
+    if (valid)
+    {
+        // buf receives the data from read_buf
+        memcpy(buf, read_buf, sizeof(TYPE) * length);
+    }
+    // Free the memory allocated for read_buf
+    free(read_buf);
+
+    int rc = fclose(pFile);
+    if (0 != rc)
+    {
+        printf("%d: Error closing %s\n", rank, file);
+        valid = 0;
+    }
+
     return valid;
 }
 
@@ -128,11 +124,11 @@ static int read_ch(char *file, TYPE **buf, int length)
  * Checks if a checkpoint file exists and restarts from there.
  *
  * @param name   Pointer to the checkpoint filename.
- * @param buf    Pointer to the pointer to the input buffer.
+ * @param buf    Pointer to the input buffer.
  * @param length Quantity of elements in the input buffer.
  * @return       1 if the checkpoint file was read successfully; 0 otherwise.
  */
-static int try_restart(char *name, TYPE **buf, int length)
+static int try_restart(char *name, TYPE *buf, int length)
 {
     int scr_retval, have_restart, ckpt_iteration;
     int found_checkpoint = 0;
@@ -527,7 +523,7 @@ int preinit_jacobi_cpu(void)
  * @param epsilon  Convergence threshold for the Jacobi method.
  * @return         Number of iterations performed by the Jacobi method, 0 if restarted from a checkpoint and a negative value on error.
  */
-int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
+int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
     int restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
@@ -565,7 +561,7 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
 
     snprintf(name, sizeof(name), "rank_%d.ckpt", rank);
 
-    old_matrix = *matrix;
+    old_matrix = matrix;
     new_matrix = (TYPE *)calloc(sizeof(TYPE), (NB + 2) * (MB + 2));
     send_east = (TYPE *)malloc(sizeof(TYPE) * MB);
     send_west = (TYPE *)malloc(sizeof(TYPE) * MB);
@@ -581,25 +577,11 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     MPI_Comm_size(ew, &ew_size);
     MPI_Comm_rank(ew, &ew_rank);
 
-    restarted = try_restart(name, &old_matrix, (NB + 2) * (MB + 2));
+    restarted = try_restart(name, old_matrix, (NB + 2) * (MB + 2));
 
     start_time = MPI_Wtime();
     do
     {
-        // print matrix for each rank
-        // if (verbose)
-        // {
-        //     printf("Rank %d matrix:\n", rank);
-        //     for (i = 0; i < MB + 2; i++)
-        //     {
-        //         for (int j = 0; j < NB + 2; j++)
-        //         {
-        //             printf("%f ", old_matrix[i * (NB + 2) + j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // }
-
         // Post receives from the neighbors
         if (0 != ns_rank)
             MPI_Irecv(RECV_NORTH(old_matrix), NB, MPI_TYPE, ns_rank - 1, 0, ns, &req[0]);
@@ -659,20 +641,6 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
         {
             printf("Iteration %4d norm %f\n", iteration, sqrtf(diff_norm));
         }
-
-        // print matrix for each rank
-        // if (verbose)
-        // {
-        //     printf("Rank %d matrix:\n", rank);
-        //     for (i = 0; i < MB + 2; i++)
-        //     {
-        //         for (int j = 0; j < NB + 2; j++)
-        //         {
-        //             printf("%f ", old_matrix[i * (NB + 2) + j]);
-        //         }
-        //         printf("\n");
-        //     }
-        // }
 
         // Swap the old and new matrices
         temp_matrix = old_matrix;
@@ -747,18 +715,7 @@ int jacobi_cpu(TYPE **matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     }
 
     // Free the memory allocated for matrices and buffers
-    if (!restarted)
-    {
-        // normal execution
-        free(*matrix != old_matrix ? old_matrix : new_matrix);
-    }
-    else
-    {
-        // restarted from a checkpoint: already freed matrix in try_restart
-        free(old_matrix);
-        free(new_matrix);
-        *matrix = NULL;
-    }
+    free(matrix != old_matrix ? old_matrix : new_matrix);
 
     // Free the memory allocated for send and receive buffers
     free(send_west);

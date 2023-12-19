@@ -4,12 +4,6 @@ This is a parallel MPI implementation of the iterative [Jacobi method](https://e
 
 To compile this application you'll need an MPI distribution with ULFM support enabled.
 
-To compile the SCR version of this application you'll need to run the following command before the `make` command:
-
-```sh
-chmod +x set_variables.sh && ./set_variables.sh
-```
-
 ## Building the versions
 
 ### Building the NOFT version
@@ -30,46 +24,65 @@ make jacobi_ulfm
 make jacobi_scr
 ```
 
-### All
+### All versions
 
 ```sh
 make all
 ```
 
+## Configuring a file with flags
+
+To use flags with the application, you can use the `flags.conf` file and pass it as an argument when running the application. A basic set of flags is already in the file, but you can change them as you wish.
+Use the `execute.sh` script to run the application with a flag file.
+
 ## Running the versions
 
 After compile with `make`, Examples of how to run the different versions are below.
 
-### Running the NOFT version
+### Running with execute.sh
+There is a script to run the application that enables the use of a flag file and other options. The script is `execute.sh` and it is located in the root directory of the project. To run the application with the script, use the following command:
 
 ```sh
-mpirun -np NP jacobi_noft -p NR -q NC -NB QC -MB QR
+./execute.sh <binary> < -f <flag_file> | -np <NP> -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--hostfile=<hostfile>] [--debug] [--use-scr-need-checkpoint] [--run-until-success] [--retry-delay <delay_time>] >
 ```
 
-### Running the ULFM version
+### Running manually
+
+#### Running the NOFT version
 
 ```sh
-mpirun --with-ft=ulfm --oversubscribe -np NP jacobi_ulfm -p NR -q NC -NB QC -MB QR
+mpirun -np <NP> jacobi_noft -p <NR> -q <NC> -NB <QC> [-MB <QR>]
 ```
 
-### Running the SCR version
+#### Running the ULFM version
 
 ```sh
-mpirun -np NP jacobi_scr -p NR -q NC -NB QC -MB QR [--debug] [--use-scr-need-checkpoint]
+mpirun --with-ft=ulfm --oversubscribe -np <NP> jacobi_ulfm -p <NR> -q <NC> -NB <QC> [-MB <QR>]
+```
+
+#### Running the SCR version
+
+```sh
+mpirun -np <NP> jacobi_scr -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--debug] [--use-scr-need-checkpoint]
 ```
 
 Flags:
 
 - --debug: Print debug information (not only SCR debug default messages)
 - --use-scr-need-checkpoint: Use SCR_Need_checkpoint to checkpoint the application
+- --run-until-success (only for jacobi_scr) If specified, run the command until it returns 0  (caution: this may cause an infinite loop)
+- --retry-delay <delay_time> (only if --run-until-success is specified) Delay time in seconds between retries. Default: 1 second.
 
 ### Arguments
 
+- binary: Binary to be executed (jacobi_noft, jacobi_ulfm or jacobi_scr if compiled with `make`)
+- flag_file: File with the flags to be used by the application
 - NP: Number of processes used by the application
 - NR: Number of processes per row
 - NC: Number of processes per column
 - QC: Number of columns
 - QR: Number of rows
+- hostfile: Hostfile for mpirun
 
 ## Cleaning
 
@@ -81,4 +94,4 @@ make clean
 
 ## Troubleshooting
 
-If `make jacobi_scr` isn't working, change the content of the `SCRDIR` variable to the path of your SCR installation
+If `make jacobi_scr` isn't working, make sure you have the `SCR_ROOT` environment variables set to the SCR installation directory.

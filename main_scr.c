@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
     // Set the error handler for MPI
     MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
-    rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
+    rc = jacobi_cpu(om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
 
     if (rc < 0)
     {

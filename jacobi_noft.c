@@ -88,7 +88,7 @@ int preinit_jacobi_cpu(void)
     return 0;
 }
 
-int jacobi_cpu(TYPE** matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
+int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
     int i, iter = 0;
     int rank, size, ew_rank, ew_size, ns_rank, ns_size;
@@ -101,7 +101,7 @@ int jacobi_cpu(TYPE** matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    om = *matrix;
+    om = matrix;
     nm = (TYPE*)calloc(sizeof(TYPE), (NB+2) * (MB+2));
     send_east = (TYPE*)malloc(sizeof(TYPE) * MB);
     send_west = (TYPE*)malloc(sizeof(TYPE) * MB);
@@ -167,7 +167,7 @@ int jacobi_cpu(TYPE** matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     twf = MPI_Wtime() - start;
     print_timings( comm, rank, twf );
 
-    if(*matrix != om) free(om);
+    if(matrix != om) free(om);
     else free(nm);
     free(send_west);
     free(send_east);
