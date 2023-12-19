@@ -82,33 +82,36 @@ static int read_ch(char *file, TYPE *buf, int length)
 
     if (valid)
     {
-        fseek(pFile, 0, SEEK_END);
-        long size = ftell(pFile);
-        fseek(pFile, 0, SEEK_SET);
+        // Assumption: checkpoint files never get corrupted
+        // fseek(pFile, 0, SEEK_END);
+        // long size = ftell(pFile);
+        // fseek(pFile, 0, SEEK_SET);
 
-        if (size != sizeof(TYPE) * length)
-        {
-            printf("%d: File %s is wrong size\n", rank, file);
-            valid = 0;
-        }
-        else
-        {
-            size_t return_value = fread(read_buf, sizeof(TYPE), length, pFile);
-            if (length != return_value)
-            {
-                printf("%d: Error reading %s\n", rank, file);
-                valid = 0;
-            }
-        }
+        // if (size != sizeof(TYPE) * length)
+        // {
+        //     printf("%d: File %s is wrong size\n", rank, file);
+        //     valid = 0;
+        // }
+        // else
+        // {
+        //     //size_t return_value = fread(read_buf, sizeof(TYPE), length, pFile);
+        //     if (length != return_value)
+        //     {
+        //         printf("%d: Error reading %s\n", rank, file);
+        //         valid = 0;
+        //     }
+        // }
+        size_t return_value = fread(buf, sizeof(TYPE), length, pFile);
     }
 
-    if (valid)
-    {
-        // buf receives the data from read_buf
-        memcpy(buf, read_buf, sizeof(TYPE) * length);
-    }
-    // Free the memory allocated for read_buf
-    free(read_buf);
+    // commented because of the assumption above
+    // if (valid)
+    // {
+    //     // buf receives the data from read_buf
+    //     memcpy(buf, read_buf, sizeof(TYPE) * length);
+    // }
+    // // Free the memory allocated for read_buf
+    // free(read_buf);
 
     int rc = fclose(pFile);
     if (0 != rc)
