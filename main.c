@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
     MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
     // Run the Jacobi CPU solver
-    rc = jacobi_cpu(&om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
+    rc = jacobi_cpu(om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */);
     if (rc < 0) {
         printf("The CPU Jacobi failed\n");
         goto cleanup_and_be_gone;

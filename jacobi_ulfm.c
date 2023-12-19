@@ -331,7 +331,7 @@ int preinit_jacobi_cpu(void)
  * @param epsilon  Convergence threshold for the Jacobi method.
  * @return         Number of iterations performed by the Jacobi method.
  */
-int jacobi_cpu(TYPE** matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
+int jacobi_cpu(TYPE* matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
     int i, is_allowed_to_kill = 1;
     int world_size, ew_rank, ew_size, ns_rank, ns_size;
@@ -364,7 +364,7 @@ int jacobi_cpu(TYPE** matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE 
     MPI_Comm_size(world, &world_size);
     printf("Rank %d is joining the execution at iteration %d\n", rank, iteration);
 
-    old_matrix = *matrix;
+    old_matrix = matrix;
     new_matrix = (TYPE *)calloc(sizeof(TYPE), (NB + 2) * (MB + 2));
     send_east = (TYPE *)malloc(sizeof(TYPE) * MB);
     send_west = (TYPE *)malloc(sizeof(TYPE) * MB);
@@ -515,7 +515,7 @@ restart: // This is the restart point
 
     // Free the memory allocated for matrices and buffers
     // If the 'matrix' variable is different from 'old_matrix', free 'old_matrix'; otherwise, free 'new_matrix'
-    free(*matrix != old_matrix ? old_matrix : new_matrix);
+    free(matrix != old_matrix ? old_matrix : new_matrix);
 
     // Free the memory allocated for send and receive buffers
     free(send_west);
