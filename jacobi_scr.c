@@ -6,6 +6,7 @@
 #include <mpi.h>
 #include <scr.h>
 #include "jacobi.h"
+#include "utils.c"
 
 extern int scr_debug;
 extern int use_scr_need_checkpoint;
@@ -530,7 +531,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 {
     int restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start_time, total_wf_time = 0; // timings
+    double start_time, total_wf_time = 0, time_to_be_disregarded = 0; // timings
     char name[SCR_MAX_FILENAME];
     MPI_Comm ew, ns;
 
@@ -655,9 +656,23 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         // Increment the iteration
         iteration++;
 
+        // Terminate the AWS instances at 1/3 and 2/3 of the total iterations
+        {
+            double t1 = MPI_Wtime();
+            if (MAX_ITER / 3 == iteration) 
+            {
+                terminate_aws_instance("Worker 1");
+            }
+            else if (2 * MAX_ITER / 3 == iteration) 
+            {
+                terminate_aws_instance("Worker 2");
+            }
+            time_to_be_disregarded += MPI_Wtime() - t1;
+        }
+
     } while ((iteration < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
-    total_wf_time = MPI_Wtime() - start_time;
+    total_wf_time = MPI_Wtime() - start_time - time_to_be_disregarded;
 
     print_timings(comm, rank, total_wf_time);
 
