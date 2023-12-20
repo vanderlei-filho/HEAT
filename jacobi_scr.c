@@ -19,14 +19,14 @@ static int verbose = 1;
 static char *scr_prefix;
 static int step;
 
-static double t_have_restart     = 0.0;
-static double t_start_restart    = 0.0;
-static double t_route_file_ch    = 0.0;
+static double t_have_restart = 0.0;
+static double t_start_restart = 0.0;
+static double t_route_file_ch = 0.0;
 static double t_complete_restart = 0.0;
-static double t_need_checkpoint  = 0.0;
-static double t_start_output     = 0.0;
-static double t_route_file_out   = 0.0;
-static double t_complete_output  = 0.0;
+static double t_need_checkpoint = 0.0;
+static double t_start_output = 0.0;
+static double t_route_file_out = 0.0;
+static double t_complete_output = 0.0;
 
 /**
  * Extracts the final number from a string.
@@ -103,6 +103,20 @@ static int read_ch(char *file, TYPE *buf, int length)
         //     }
         // }
         fread(buf, sizeof(TYPE), length, pFile);
+
+        if (scr_debug)
+        {
+            double data[8];
+            fread(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
+            t_have_restart += data[0];
+            t_start_restart += data[1];
+            t_route_file_ch += data[2];
+            t_complete_restart += data[3];
+            t_need_checkpoint += data[4];
+            t_start_output += data[5];
+            t_route_file_out += data[6];
+            t_complete_output += data[7];
+        }
     }
 
     // commented because of the assumption above
@@ -284,6 +298,15 @@ static int write_ch(char *file, TYPE *buf, int length)
     else
     {
         return_value = fwrite(buf, sizeof(TYPE), length, pFile);
+
+        if (scr_debug)
+        {
+            double data[] = {t_have_restart, t_start_restart, t_route_file_ch, t_complete_restart,
+                             t_need_checkpoint, t_start_output, t_route_file_out, t_complete_output};
+            // write all the debug info to the file
+            fwrite(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
+        }
+
         if (length != return_value)
         {
             valid = 0;
@@ -659,14 +682,14 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         // Terminate the AWS instances at 1/3 and 2/3 of the total iterations
         {
             double t1 = MPI_Wtime();
-            if (MAX_ITER / 3 == iteration) 
-            {
-                terminate_aws_instance("Worker 1");
-            }
-            else if (2 * MAX_ITER / 3 == iteration) 
-            {
-                terminate_aws_instance("Worker 2");
-            }
+            // if (MAX_ITER / 3 == iteration)
+            // {
+            //     terminate_aws_instance("Worker 1");
+            // }
+            // else if (2 * MAX_ITER / 3 == iteration)
+            // {
+            //     terminate_aws_instance("Worker 2");
+            // }
             time_to_be_disregarded += MPI_Wtime() - t1;
         }
 
