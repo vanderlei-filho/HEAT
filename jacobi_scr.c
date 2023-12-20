@@ -8,7 +8,7 @@
 #include "jacobi.h"
 #include "utils.c"
 
-extern int scr_debug;
+extern int debug;
 extern int use_scr_need_checkpoint;
 
 static int rank = MPI_PROC_NULL;
@@ -104,7 +104,7 @@ static int read_ch(char *file, TYPE *buf, int length)
         // }
         fread(buf, sizeof(TYPE), length, pFile);
 
-        if (scr_debug)
+        if (debug)
         {
             double data[8];
             fread(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
@@ -154,7 +154,7 @@ static int try_restart(char *name, TYPE *buf, int length)
     char dset[SCR_MAX_FILENAME];
     char path[SCR_MAX_FILENAME];
     char file[SCR_MAX_FILENAME];
-    double t1, t2;
+    double t1, new_measure;
     do
     {
         if (verbose && 0 == rank)
@@ -162,17 +162,17 @@ static int try_restart(char *name, TYPE *buf, int length)
             printf("Checking for restart...\n");
         }
 
-        if (scr_debug)
+        if (debug)
         {
             t1 = MPI_Wtime();
         }
 
         scr_retval = SCR_Have_restart(&have_restart, dset);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_have_restart += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_have_restart = (iteration * t_have_restart + new_measure) / (iteration + 1);
         }
 
         if (SCR_SUCCESS != scr_retval)
@@ -188,17 +188,17 @@ static int try_restart(char *name, TYPE *buf, int length)
                 printf("Restarting from %s...\n", dset);
             }
 
-            if (scr_debug)
+            if (debug)
             {
                 t1 = MPI_Wtime();
             }
 
             scr_retval = SCR_Start_restart(dset);
 
-            if (scr_debug)
+            if (debug)
             {
-                t2 = MPI_Wtime();
-                t_start_restart += t2 - t1;
+                new_measure = MPI_Wtime() - t1;
+                t_start_restart = (iteration * t_start_restart + new_measure) / (iteration + 1);
             }
 
             if (SCR_SUCCESS != scr_retval)
@@ -210,17 +210,17 @@ static int try_restart(char *name, TYPE *buf, int length)
             // snprintf(path, sizeof(path), "%s/%s", dset, name);
             snprintf(path, sizeof(path), "%s/%s/%s", scr_prefix, dset, name);
 
-            if (scr_debug)
+            if (debug)
             {
                 t1 = MPI_Wtime();
             }
 
             scr_retval = SCR_Route_file(path, file);
 
-            if (scr_debug)
+            if (debug)
             {
-                t2 = MPI_Wtime();
-                t_route_file_ch += t2 - t1;
+                new_measure = MPI_Wtime() - t1;
+                t_route_file_ch = (iteration * t_route_file_ch + new_measure) / (iteration + 1);
             }
 
             if (SCR_SUCCESS != scr_retval)
@@ -241,17 +241,17 @@ static int try_restart(char *name, TYPE *buf, int length)
                 }
             }
 
-            if (scr_debug)
+            if (debug)
             {
                 t1 = MPI_Wtime();
             }
 
             scr_retval = SCR_Complete_restart(found_checkpoint);
 
-            if (scr_debug)
+            if (debug)
             {
-                t2 = MPI_Wtime();
-                t_complete_restart += t2 - t1;
+                new_measure = MPI_Wtime() - t1;
+                t_complete_restart = (iteration * t_complete_restart + new_measure) / (iteration + 1);
             }
 
             if (SCR_SUCCESS != scr_retval)
@@ -299,7 +299,7 @@ static int write_ch(char *file, TYPE *buf, int length)
     {
         return_value = fwrite(buf, sizeof(TYPE), length, pFile);
 
-        if (scr_debug)
+        if (debug)
         {
             double data[] = {t_have_restart, t_start_restart, t_route_file_ch, t_complete_restart,
                              t_need_checkpoint, t_start_output, t_route_file_out, t_complete_output};
@@ -337,9 +337,9 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
     char dirname[SCR_MAX_FILENAME];
     char path[SCR_MAX_FILENAME];
     char file[SCR_MAX_FILENAME];
-    double t1, t2;
+    double t1, new_measure;
 
-    if (scr_debug)
+    if (debug)
     {
         t1 = MPI_Wtime();
     }
@@ -348,10 +348,10 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
     {
         scr_retval = SCR_Need_checkpoint(&need_checkpoint);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_need_checkpoint += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_need_checkpoint = (iteration * t_need_checkpoint + new_measure) / (iteration + 1);
         }
 
         if (SCR_SUCCESS != scr_retval)
@@ -362,17 +362,17 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
     }
     else
     {
-        if (scr_debug)
+        if (debug)
         {
             t1 = MPI_Wtime();
         }
 
         need_checkpoint = (iteration % step == 0);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_need_checkpoint += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_need_checkpoint = (iteration * t_need_checkpoint + new_measure) / (iteration + 1);
         }
     }
 
@@ -393,17 +393,17 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
         }
         snprintf(dirname, sizeof(dirname), "timestep.%d", iteration);
 
-        if (scr_debug)
+        if (debug)
         {
             t1 = MPI_Wtime();
         }
 
         scr_retval = SCR_Start_output(dirname, SCR_FLAG_CHECKPOINT);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_start_output += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_start_output = (iteration * t_start_output + new_measure) / (iteration + 1);
         }
 
         if (SCR_SUCCESS != scr_retval)
@@ -414,17 +414,17 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         snprintf(path, sizeof(path), "%s/%s/%s", scr_prefix, dirname, name);
 
-        if (scr_debug)
+        if (debug)
         {
             t1 = MPI_Wtime();
         }
 
         scr_retval = SCR_Route_file(path, file);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_route_file_out += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_route_file_out = (iteration * t_route_file_out + new_measure) / (iteration + 1);
         }
 
         if (SCR_SUCCESS != scr_retval)
@@ -435,17 +435,17 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         valid = write_ch(file, buf, length);
 
-        if (scr_debug)
+        if (debug)
         {
             t1 = MPI_Wtime();
         }
 
         scr_retval = SCR_Complete_output(valid);
 
-        if (scr_debug)
+        if (debug)
         {
-            t2 = MPI_Wtime();
-            t_complete_output += t2 - t1;
+            new_measure = MPI_Wtime() - t1;
+            t_complete_output = (iteration * t_complete_output + new_measure) / (iteration + 1);
         }
 
         if (SCR_SUCCESS != scr_retval)
@@ -699,7 +699,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     print_timings(comm, rank, total_wf_time);
 
-    if (scr_debug)
+    if (debug)
     {
         double avg_t_have_restart;
         MPI_Reduce(&t_have_restart, &avg_t_have_restart, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
@@ -736,7 +736,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         // If the current process is rank 0, print the avg timings
         if (0 == rank)
         {
-            printf("##### Debug timings #####\n");
+            printf("##### Debug timings (Average by processes and iterations) #####\n");
             printf("# t_have_restart     (AVG): %13.5e\n", avg_t_have_restart);
             printf("# t_start_restart    (AVG): %13.5e\n", avg_t_start_restart);
             printf("# t_route_file_ch    (AVG): %13.5e\n", avg_t_route_file_ch);
