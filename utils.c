@@ -5,8 +5,10 @@
 // Warning: if you change the value of MAX_ID_LEN, you might need to change the
 // length of the format_specifier string.
 
-#define MAX_ID_LEN 32   // The maximum length of an instance ID
-#define MAX_NAME_LEN 64 // The maximum length of an instance name
+#define MAX_ID_LEN 31   // The maximum length of an instance ID
+#define MAX_NAME_LEN 63 // The maximum length of an instance name
+#define INSTANCE_ID_FILE "instance_id.txt"
+#define TERMINATED_INSTANCES_FILE "terminated_instances"
 
 /**
  * Writes the name of the instance that was terminated to a file.
@@ -15,12 +17,12 @@
  */
 void write_terminated_instances_file(const char *instance_name)
 {
-    const char *file_name = "terminated_instances.txt";
     FILE *fd;
-    fd = fopen(file_name, "a");
+
+    fd = fopen(TERMINATED_INSTANCES_FILE, "ab");
     if (NULL != fd)
     {
-        fprintf(fd, "%s\n", instance_name);
+        fwrite(instance_name, sizeof(char), MAX_NAME_LEN + 1, fd);
         fclose(fd);
     }
 }
@@ -28,7 +30,7 @@ void write_terminated_instances_file(const char *instance_name)
 /**
  * Terminates an AWS instance.
  *
- * @param instance_name The name of the instance to terminate. Max length is 64.
+ * @param instance_name The name of the instance to terminate. Max length is 63.
  */
 void terminate_aws_instance(const char *instance_name)
 {
@@ -53,7 +55,7 @@ void terminate_aws_instance(const char *instance_name)
 
     system(get_id_command);
 
-    fd = fopen("instance_id.txt", "r");
+    fd = fopen(INSTANCE_ID_FILE, "r");
     if (NULL != fd) // If the file exists
     {
         fseek(fd, 0, SEEK_END);
@@ -69,10 +71,13 @@ void terminate_aws_instance(const char *instance_name)
 
             system(command);
 
-            remove("instance_id.txt");
-
             write_terminated_instances_file(instance_name);
         }
+        else
+        {
+            fclose(fd);
+        }
+        remove(INSTANCE_ID_FILE);
     }
 }
 
@@ -84,17 +89,17 @@ void terminate_aws_instance(const char *instance_name)
  */
 int was_instance_already_terminated(const char *instance_name)
 {
-    const char *file_name = "terminated_instances.txt";
     FILE *fd;
-    char line[MAX_NAME_LEN + 1];
+    char instance_read[MAX_NAME_LEN + 1];
+
     int was_terminated = 0;
 
-    fd = fopen(file_name, "r");
+    fd = fopen(TERMINATED_INSTANCES_FILE, "rb");
     if (NULL != fd)
     {
-        while (fgets(line, sizeof(line), fd))
+        while (fread(instance_read, sizeof(char), MAX_NAME_LEN + 1, fd) == MAX_NAME_LEN + 1)
         {
-            if (strcmp(line, instance_name) == 0)
+            if (strcmp(instance_read, instance_name) == 0)
             {
                 was_terminated = 1;
                 break;
@@ -102,6 +107,5 @@ int was_instance_already_terminated(const char *instance_name)
         }
         fclose(fd);
     }
-
     return was_terminated;
 }
