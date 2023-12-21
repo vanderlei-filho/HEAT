@@ -682,13 +682,16 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         // Terminate the AWS instances at 1/3 and 2/3 of the total iterations
         {
             double t1 = MPI_Wtime();
-            if (MAX_ITER / 3 == iteration)
+            if (0 == rank)
             {
-                terminate_aws_instance("Worker 1");
-            }
-            else if (2 * MAX_ITER / 3 == iteration)
-            {
-                terminate_aws_instance("Worker 2");
+                if (MAX_ITER / 3 == iteration)
+                {
+                    terminate_aws_instance("Worker 1");
+                }
+                else if (2 * MAX_ITER / 3 == iteration)
+                {
+                    terminate_aws_instance("Worker 2");
+                }
             }
             time_to_be_disregarded += MPI_Wtime() - t1;
         }
