@@ -554,7 +554,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 {
     int restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start_time, total_wf_time = 0, time_to_be_disregarded = 0; // timings
+    double start_time, total_wf_time = 0, time_terminate_instances = 0; // timings
     char name[SCR_MAX_FILENAME];
     MPI_Comm ew, ns;
 
@@ -696,14 +696,19 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
                     terminate_aws_instance("Worker 2");
                 }
             }
-            time_to_be_disregarded += MPI_Wtime() - t1;
+            time_terminate_instances += MPI_Wtime() - t1;
         }
 
     } while ((iteration < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
-    total_wf_time = MPI_Wtime() - start_time - time_to_be_disregarded;
+    total_wf_time = MPI_Wtime() - start_time - time_terminate_instances;
 
     print_timings(comm, rank, total_wf_time);
+
+    if (0 == rank)
+    {
+        printf("# time_terminate_instances: %13.5e\n", time_terminate_instances);
+    }
 
     if (debug)
     {
