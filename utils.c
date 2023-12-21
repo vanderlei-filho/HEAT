@@ -9,6 +9,23 @@
 #define MAX_NAME_LEN 64 // The maximum length of an instance name
 
 /**
+ * Writes the name of the instance that was terminated to a file.
+ *
+ * @param instance_name The name of the instance that was terminated.
+ */
+void write_terminated_instances_file(const char *instance_name)
+{
+    const char *file_name = "terminated_instances.txt";
+    FILE *fd;
+    fd = fopen(file_name, "a");
+    if (NULL != fd)
+    {
+        fprintf(fd, "%s\n", instance_name);
+        fclose(fd);
+    }
+}
+
+/**
  * Terminates an AWS instance.
  *
  * @param instance_name The name of the instance to terminate. Max length is 64.
@@ -53,6 +70,38 @@ void terminate_aws_instance(const char *instance_name)
             system(command);
 
             remove("instance_id.txt");
+
+            write_terminated_instances_file(instance_name);
         }
     }
+}
+
+/**
+ * Checks if an instance was already terminated.
+ *
+ * @param instance_name The name of the instance to check.
+ * @return 1 if the instance was already terminated, 0 otherwise.
+ */
+int was_instance_already_terminated(const char *instance_name)
+{
+    const char *file_name = "terminated_instances.txt";
+    FILE *fd;
+    char line[MAX_NAME_LEN + 1];
+    int was_terminated = 0;
+
+    fd = fopen(file_name, "r");
+    if (NULL != fd)
+    {
+        while (fgets(line, sizeof(line), fd))
+        {
+            if (strcmp(line, instance_name) == 0)
+            {
+                was_terminated = 1;
+                break;
+            }
+        }
+        fclose(fd);
+    }
+
+    return was_terminated;
 }

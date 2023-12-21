@@ -684,11 +684,14 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
             double t1 = MPI_Wtime();
             if (0 == rank)
             {
-                if (MAX_ITER / 3 == iteration)
+                // hpc@cloud will automatically recover the instance once it is
+                // terminated and rerun the script. If you don't check if the
+                // instance has already completed, you will end up in an infinite loop.
+                if (MAX_ITER / 3 == iteration && !(was_instance_already_terminated("Worker 1")))
                 {
                     terminate_aws_instance("Worker 1");
                 }
-                else if (2 * MAX_ITER / 3 == iteration)
+                else if (2 * MAX_ITER / 3 == iteration && !(was_instance_already_terminated("Worker 2")))
                 {
                     terminate_aws_instance("Worker 2");
                 }
