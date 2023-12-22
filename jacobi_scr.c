@@ -13,7 +13,7 @@ extern int use_scr_need_checkpoint;
 
 static int rank = MPI_PROC_NULL;
 static int iteration = 0;
-static int verbose = 1;
+static int verbose = 0;
 
 // SCR query variables
 static char *scr_prefix;
@@ -70,12 +70,12 @@ static int read_ch(char *file, TYPE *buf, int length)
     TYPE *read_buf = (TYPE *)malloc(sizeof(TYPE) * length);
     FILE *pFile = fopen(file, "rb");
 
-    if (NULL == read_buf)
+    if (verbose && NULL == read_buf)
     {
         printf("%d: Could not allocate memory for read_buf\n", rank);
         valid = 0;
     }
-    if (NULL == pFile)
+    if (verbose && NULL == pFile)
     {
         printf("%d: Could not open file %s\n", rank, file);
         valid = 0;
@@ -129,7 +129,7 @@ static int read_ch(char *file, TYPE *buf, int length)
     // free(read_buf);
 
     int rc = fclose(pFile);
-    if (0 != rc)
+    if (verbose && 0 != rc)
     {
         printf("%d: Error closing %s\n", rank, file);
         valid = 0;
@@ -175,7 +175,7 @@ static int try_restart(char *name, TYPE *buf, int length)
             t_have_restart = (iteration * t_have_restart + new_measure) / (iteration + 1);
         }
 
-        if (SCR_SUCCESS != scr_retval)
+        if (verbose && SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Have_restart: %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
@@ -183,7 +183,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
         if (have_restart)
         {
-            if (0 == rank)
+            if (verbose && 0 == rank)
             {
                 printf("Restarting from %s...\n", dset);
             }
@@ -201,7 +201,7 @@ static int try_restart(char *name, TYPE *buf, int length)
                 t_start_restart = (iteration * t_start_restart + new_measure) / (iteration + 1);
             }
 
-            if (SCR_SUCCESS != scr_retval)
+            if (verbose && SCR_SUCCESS != scr_retval)
             {
                 printf("%d: failed calling SCR_Start_restart: %d: @%s:%d\n",
                        rank, scr_retval, __FILE__, __LINE__);
@@ -223,7 +223,7 @@ static int try_restart(char *name, TYPE *buf, int length)
                 t_route_file_ch = (iteration * t_route_file_ch + new_measure) / (iteration + 1);
             }
 
-            if (SCR_SUCCESS != scr_retval)
+            if (verbose && SCR_SUCCESS != scr_retval)
             {
                 printf("%d: failed calling SCR_Route_file: %d: @%s:%d\n",
                        rank, scr_retval, __FILE__, __LINE__);
@@ -236,7 +236,10 @@ static int try_restart(char *name, TYPE *buf, int length)
                 }
                 else
                 {
-                    printf("%d: Could not read checkpoint %d from %s\n", rank, iteration, file);
+                    if (verbose)
+                    {
+                        printf("%d: Could not read checkpoint %d from %s\n", rank, iteration, file);
+                    }
                     found_checkpoint = 0;
                 }
             }
@@ -254,7 +257,7 @@ static int try_restart(char *name, TYPE *buf, int length)
                 t_complete_restart = (iteration * t_complete_restart + new_measure) / (iteration + 1);
             }
 
-            if (SCR_SUCCESS != scr_retval)
+            if (verbose && SCR_SUCCESS != scr_retval)
             {
                 printf("%d: failed calling SCR_Complete_restart: %d: @%s:%d\n",
                        rank, scr_retval, __FILE__, __LINE__);
@@ -290,7 +293,7 @@ static int write_ch(char *file, TYPE *buf, int length)
 
     /* open the file and write the checkpoint */
     pFile = fopen(file, "wb");
-    if (NULL == pFile)
+    if (verbose && NULL == pFile)
     {
         printf("%d: Could not open file %s\n", rank, file);
         valid = 0;
@@ -307,7 +310,7 @@ static int write_ch(char *file, TYPE *buf, int length)
             fwrite(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
         }
 
-        if (length != return_value)
+        if (verbose && length != return_value)
         {
             valid = 0;
             printf("%d: Error writing %s\n", rank, file);
@@ -317,7 +320,10 @@ static int write_ch(char *file, TYPE *buf, int length)
         if (0 != rc)
         {
             valid = 0;
-            printf("%d: Error closing %s\n", rank, file);
+            if (verbose)
+            {
+                printf("%d: Error closing %s\n", rank, file);
+            }
         }
     }
     return valid;
@@ -354,7 +360,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
             t_need_checkpoint = (iteration * t_need_checkpoint + new_measure) / (iteration + 1);
         }
 
-        if (SCR_SUCCESS != scr_retval)
+        if (verbose && SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Need_checkpoint: %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
@@ -378,7 +384,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
     if (need_checkpoint && iteration == MAX_ITER - 1) // last iteration
     {
-        if (0 == rank)
+        if (verbose && 0 == rank)
         {
             printf("Last iteration: will not save checkpoint\n");
         }
@@ -406,7 +412,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
             t_start_output = (iteration * t_start_output + new_measure) / (iteration + 1);
         }
 
-        if (SCR_SUCCESS != scr_retval)
+        if (verbose && SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Start_output(): %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
@@ -427,7 +433,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
             t_route_file_out = (iteration * t_route_file_out + new_measure) / (iteration + 1);
         }
 
-        if (SCR_SUCCESS != scr_retval)
+        if (verbose && SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Route_file(): %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
@@ -448,7 +454,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
             t_complete_output = (iteration * t_complete_output + new_measure) / (iteration + 1);
         }
 
-        if (SCR_SUCCESS != scr_retval)
+        if (verbose && SCR_SUCCESS != scr_retval)
         {
             printf("%d: failed calling SCR_Complete_output: %d: @%s:%d\n",
                    rank, scr_retval, __FILE__, __LINE__);
@@ -701,7 +707,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     } while ((iteration < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
-    total_wf_time = MPI_Wtime() - start_time - time_terminate_instances;
+    total_wf_time = MPI_Wtime() - start_time;
 
     print_timings(comm, rank, total_wf_time);
 
