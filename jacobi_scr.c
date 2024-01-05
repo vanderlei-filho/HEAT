@@ -19,6 +19,10 @@ static int verbose = 0;
 static char *scr_prefix;
 static int step;
 
+static double t_terminate_instances = 0.0;
+
+static double t_scr_init = 0.0;
+static double t_scr_finalize = 0.0;
 static double t_have_restart = 0.0;
 static double t_start_restart = 0.0;
 static double t_route_file_ch = 0.0;
@@ -106,16 +110,18 @@ static int read_ch(char *file, TYPE *buf, int length)
 
         if (debug)
         {
-            double data[8];
+            double data[10];
             fread(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
-            t_have_restart += data[0];
-            t_start_restart += data[1];
-            t_route_file_ch += data[2];
-            t_complete_restart += data[3];
-            t_need_checkpoint += data[4];
-            t_start_output += data[5];
-            t_route_file_out += data[6];
-            t_complete_output += data[7];
+            t_terminate_instances += data[0];
+            t_scr_init += data[1];
+            t_have_restart += data[2];
+            t_start_restart += data[3];
+            t_route_file_ch += data[4];
+            t_complete_restart += data[5];
+            t_need_checkpoint += data[6];
+            t_start_output += data[7];
+            t_route_file_out += data[8];
+            t_complete_output += data[9];
         }
     }
 
@@ -154,7 +160,7 @@ static int try_restart(char *name, TYPE *buf, int length)
     char dset[SCR_MAX_FILENAME];
     char path[SCR_MAX_FILENAME];
     char file[SCR_MAX_FILENAME];
-    double t1, new_measure;
+    double t1;
     do
     {
         if (verbose && 0 == rank)
@@ -171,8 +177,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_have_restart = (iteration * t_have_restart + new_measure) / (iteration + 1);
+            t_have_restart += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -197,8 +202,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
             if (debug)
             {
-                new_measure = MPI_Wtime() - t1;
-                t_start_restart = (iteration * t_start_restart + new_measure) / (iteration + 1);
+                t_start_restart = MPI_Wtime() - t1;
             }
 
             if (verbose && SCR_SUCCESS != scr_retval)
@@ -207,7 +211,6 @@ static int try_restart(char *name, TYPE *buf, int length)
                        rank, scr_retval, __FILE__, __LINE__);
             }
 
-            // snprintf(path, sizeof(path), "%s/%s", dset, name);
             snprintf(path, sizeof(path), "%s/%s/%s", scr_prefix, dset, name);
 
             if (debug)
@@ -219,8 +222,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
             if (debug)
             {
-                new_measure = MPI_Wtime() - t1;
-                t_route_file_ch = (iteration * t_route_file_ch + new_measure) / (iteration + 1);
+                t_route_file_ch += MPI_Wtime() - t1;
             }
 
             if (verbose && SCR_SUCCESS != scr_retval)
@@ -253,8 +255,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
             if (debug)
             {
-                new_measure = MPI_Wtime() - t1;
-                t_complete_restart = (iteration * t_complete_restart + new_measure) / (iteration + 1);
+                t_complete_restart += MPI_Wtime() - t1;
             }
 
             if (verbose && SCR_SUCCESS != scr_retval)
@@ -304,8 +305,10 @@ static int write_ch(char *file, TYPE *buf, int length)
 
         if (debug)
         {
-            double data[] = {t_have_restart, t_start_restart, t_route_file_ch, t_complete_restart,
-                             t_need_checkpoint, t_start_output, t_route_file_out, t_complete_output};
+            double data[] = {t_terminate_instances, t_scr_init, t_have_restart,
+                             t_start_restart, t_route_file_ch, t_complete_restart,
+                             t_need_checkpoint, t_start_output, t_route_file_out,
+                             t_complete_output};
             // write all the debug info to the file
             fwrite(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
         }
@@ -343,7 +346,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
     char dirname[SCR_MAX_FILENAME];
     char path[SCR_MAX_FILENAME];
     char file[SCR_MAX_FILENAME];
-    double t1, new_measure;
+    double t1;
 
     if (debug)
     {
@@ -356,8 +359,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_need_checkpoint = (iteration * t_need_checkpoint + new_measure) / (iteration + 1);
+            t_need_checkpoint += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -377,8 +379,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_need_checkpoint = (iteration * t_need_checkpoint + new_measure) / (iteration + 1);
+            t_need_checkpoint += MPI_Wtime() - t1;
         }
     }
 
@@ -408,8 +409,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_start_output = (iteration * t_start_output + new_measure) / (iteration + 1);
+            t_start_output += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -429,8 +429,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_route_file_out = (iteration * t_route_file_out + new_measure) / (iteration + 1);
+            t_route_file_out += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -450,8 +449,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            new_measure = MPI_Wtime() - t1;
-            t_complete_output = (iteration * t_complete_output + new_measure) / (iteration + 1);
+            t_complete_output += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -558,9 +556,9 @@ int preinit_jacobi_cpu(void)
  */
 int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE epsilon)
 {
-    int restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
+    int scr_retval, restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start_time, total_wf_time = 0, time_terminate_instances = 0; // timings
+    double start_time, total_wf_time = 0; // timings
     char name[SCR_MAX_FILENAME];
     MPI_Comm ew, ns;
 
@@ -583,7 +581,22 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     }
 
     // Initialize SCR
-    if (SCR_Init() != SCR_SUCCESS)
+    {
+        double t1;
+        if (debug)
+        {
+            t1 = MPI_Wtime();
+        }
+
+        scr_retval = SCR_Init();
+
+        if (debug)
+        {
+            t_scr_init += MPI_Wtime() - t1;
+        }
+    }
+
+    if (SCR_SUCCESS != scr_retval)
     {
         printf("SCR_Init failed\n");
         MPI_Abort(MPI_COMM_WORLD, 1);
@@ -702,7 +715,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
                     terminate_aws_instance("Worker 2");
                 }
             }
-            time_terminate_instances += MPI_Wtime() - t1;
+            t_terminate_instances += MPI_Wtime() - t1;
         }
 
     } while ((iteration < MAX_ITER) && (sqrt(diff_norm) > epsilon));
@@ -713,11 +726,15 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 
     if (0 == rank)
     {
-        printf("# time_terminate_instances: %13.5e\n", time_terminate_instances);
+        printf("# t_terminate_instances: %13.5e\n", t_terminate_instances);
     }
 
     if (debug)
     {
+        double avg_t_scr_init;
+        MPI_Reduce(&t_scr_init, &avg_t_scr_init, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+        avg_t_scr_init /= size;
+
         double avg_t_have_restart;
         MPI_Reduce(&t_have_restart, &avg_t_have_restart, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
         avg_t_have_restart /= size;
@@ -753,7 +770,8 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         // If the current process is rank 0, print the avg timings
         if (0 == rank)
         {
-            printf("##### Debug timings (Average by processes and iterations) #####\n");
+            printf("##### Debug timings (Average by processes) #####\n");
+            printf("# t_scr_init         (AVG): %13.5e\n", avg_t_scr_init);
             printf("# t_have_restart     (AVG): %13.5e\n", avg_t_have_restart);
             printf("# t_start_restart    (AVG): %13.5e\n", avg_t_start_restart);
             printf("# t_route_file_ch    (AVG): %13.5e\n", avg_t_route_file_ch);
@@ -784,7 +802,30 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
     MPI_Comm_free(&ns);
     MPI_Comm_free(&ew);
 
-    SCR_Finalize();
+    {
+        double t1;
+
+        if (debug)
+        {
+            t1 = MPI_Wtime();
+        }
+
+        SCR_Finalize();
+
+        if (debug)
+        {
+            t_scr_finalize = MPI_Wtime() - t1;
+
+            double avg_t_scr_finalize;
+            MPI_Reduce(&t_scr_finalize, &avg_t_scr_finalize, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+            avg_t_scr_finalize /= size;
+
+            if (0 == rank)
+            {
+                printf("# t_scr_finalize     (AVG): %13.5e\n", avg_t_scr_finalize);
+            }
+        }
+    }
 
     return iteration;
 }
