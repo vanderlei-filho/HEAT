@@ -25,11 +25,10 @@ static double t_scr_init = 0.0;
 static double t_scr_finalize = 0.0;
 static double t_have_restart = 0.0;
 static double t_start_restart = 0.0;
-static double t_route_file_ch = 0.0;
+static double t_route_file = 0.0;
 static double t_complete_restart = 0.0;
 static double t_need_checkpoint = 0.0;
 static double t_start_output = 0.0;
-static double t_route_file_out = 0.0;
 static double t_complete_output = 0.0;
 
 /**
@@ -110,17 +109,16 @@ static int read_ch(char *file, TYPE *buf, int length)
 
         if (debug)
         {
-            double data[10];
+            double data[9];
             fread(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
             t_terminate_instances += data[0];
             t_scr_init += data[1];
             t_have_restart += data[2];
             t_start_restart += data[3];
-            t_route_file_ch += data[4];
+            t_route_file += data[4];
             t_complete_restart += data[5];
             t_need_checkpoint += data[6];
             t_start_output += data[7];
-            t_route_file_out += data[8];
             t_complete_output += data[9];
         }
     }
@@ -222,7 +220,7 @@ static int try_restart(char *name, TYPE *buf, int length)
 
             if (debug)
             {
-                t_route_file_ch += MPI_Wtime() - t1;
+                t_route_file += MPI_Wtime() - t1;
             }
 
             if (verbose && SCR_SUCCESS != scr_retval)
@@ -306,9 +304,8 @@ static int write_ch(char *file, TYPE *buf, int length)
         if (debug)
         {
             double data[] = {t_terminate_instances, t_scr_init, t_have_restart,
-                             t_start_restart, t_route_file_ch, t_complete_restart,
-                             t_need_checkpoint, t_start_output, t_route_file_out,
-                             t_complete_output};
+                             t_start_restart, t_route_file, t_complete_restart,
+                             t_need_checkpoint, t_start_output, t_complete_output};
             // write all the debug info to the file
             fwrite(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
         }
@@ -429,7 +426,7 @@ static void write_checkpoint(char *name, TYPE *buf, int length)
 
         if (debug)
         {
-            t_route_file_out += MPI_Wtime() - t1;
+            t_route_file += MPI_Wtime() - t1;
         }
 
         if (verbose && SCR_SUCCESS != scr_retval)
@@ -743,9 +740,9 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         MPI_Reduce(&t_start_restart, &avg_t_start_restart, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
         avg_t_start_restart /= size;
 
-        double avg_t_route_file_ch;
-        MPI_Reduce(&t_route_file_ch, &avg_t_route_file_ch, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
-        avg_t_route_file_ch /= size;
+        double avg_t_route_file;
+        MPI_Reduce(&t_route_file, &avg_t_route_file, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
+        avg_t_route_file /= size;
 
         double avg_t_complete_restart;
         MPI_Reduce(&t_complete_restart, &avg_t_complete_restart, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
@@ -759,10 +756,6 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         MPI_Reduce(&t_start_output, &avg_t_start_output, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
         avg_t_start_output /= size;
 
-        double avg_t_route_file_out;
-        MPI_Reduce(&t_route_file_out, &avg_t_route_file_out, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
-        avg_t_route_file_out /= size;
-
         double avg_t_complete_output;
         MPI_Reduce(&t_complete_output, &avg_t_complete_output, 1, MPI_DOUBLE, MPI_SUM, 0, comm);
         avg_t_complete_output /= size;
@@ -774,7 +767,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
             printf("# t_scr_init         (AVG): %13.5e\n", avg_t_scr_init);
             printf("# t_have_restart     (AVG): %13.5e\n", avg_t_have_restart);
             printf("# t_start_restart    (AVG): %13.5e\n", avg_t_start_restart);
-            printf("# t_route_file_ch    (AVG): %13.5e\n", avg_t_route_file_ch);
+            printf("# t_route_file       (AVG): %13.5e\n", avg_t_route_file);
             printf("# t_complete_restart (AVG): %13.5e\n", avg_t_complete_restart);
             if (use_scr_need_checkpoint)
             {
@@ -785,7 +778,6 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
                 printf("# manual_ch_check    (AVG): %13.5e\n", avg_t_need_checkpoint);
             }
             printf("# t_start_output     (AVG): %13.5e\n", avg_t_start_output);
-            printf("# t_route_file_out   (AVG): %13.5e\n", avg_t_route_file_out);
             printf("# t_complete_output  (AVG): %13.5e\n", avg_t_complete_output);
         }
     }
