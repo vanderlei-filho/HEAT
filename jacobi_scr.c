@@ -19,8 +19,15 @@ static int verbose = 0;
 static char *scr_prefix;
 static int step;
 
+// non-idle time (it does not include the time spent with termination of 
+// instances, checkpoint saving, restoration and waiting for instances to be 
+// recreated)
+static double total_wf_time = 0.0;
+
+// time spent with termination of instances
 static double t_terminate_instances = 0.0;
 
+// debug timings
 static double t_scr_init = 0.0;
 static double t_scr_finalize = 0.0;
 static double t_have_restart = 0.0;
@@ -109,16 +116,17 @@ static int read_ch(char *file, TYPE *buf, int length)
 
         if (debug)
         {
-            double data[9];
+            double data[10];
             fread(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
-            t_terminate_instances += data[0];
-            t_scr_init += data[1];
-            t_have_restart += data[2];
-            t_start_restart += data[3];
-            t_route_file += data[4];
-            t_complete_restart += data[5];
-            t_need_checkpoint += data[6];
-            t_start_output += data[7];
+            total_wf_time += data[0];
+            t_terminate_instances += data[1];
+            t_scr_init += data[2];
+            t_have_restart += data[3];
+            t_start_restart += data[4];
+            t_route_file += data[5];
+            t_complete_restart += data[6];
+            t_need_checkpoint += data[7];
+            t_start_output += data[8];
             t_complete_output += data[9];
         }
     }
@@ -303,10 +311,11 @@ static int write_ch(char *file, TYPE *buf, int length)
 
         if (debug)
         {
-            double data[] = {t_terminate_instances, t_scr_init, t_have_restart,
-                             t_start_restart, t_route_file, t_complete_restart,
-                             t_need_checkpoint, t_start_output, t_complete_output};
-            // write all the debug info to the file
+            double data[] = {total_wf_time, t_terminate_instances, t_scr_init,
+                             t_have_restart, t_start_restart, t_route_file,
+                             t_complete_restart, t_need_checkpoint, t_start_output,
+                             t_complete_output};
+            // write all the debug timings to the file
             fwrite(data, sizeof(double), sizeof(data) / sizeof(double), pFile);
         }
 
@@ -555,7 +564,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
 {
     int scr_retval, restarted, i, size, ew_rank, ew_size, ns_rank, ns_size;
     TYPE *old_matrix, *new_matrix, *temp_matrix, *send_east, *send_west, *recv_east, *recv_west, diff_norm;
-    double start_time, total_wf_time = 0; // timings
+    double start_time; // timings
     char name[SCR_MAX_FILENAME];
     MPI_Comm ew, ns;
 
@@ -690,10 +699,16 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
         old_matrix = new_matrix;
         new_matrix = temp_matrix;
 
+        total_wf_time += MPI_Wtime() - start_time;
+
         write_checkpoint(name, old_matrix, (NB + 2) * (MB + 2));
+
+        start_time = MPI_Wtime();
 
         // Increment the iteration
         iteration++;
+
+        total_wf_time += MPI_Wtime() - start_time;
 
         // Terminate the AWS instances at 1/3 and 2/3 of the total iterations
         {
@@ -715,9 +730,11 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm, TYPE e
             t_terminate_instances += MPI_Wtime() - t1;
         }
 
+        start_time = MPI_Wtime();
+
     } while ((iteration < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
-    total_wf_time = MPI_Wtime() - start_time;
+    total_wf_time += MPI_Wtime() - start_time;
 
     print_timings(comm, rank, total_wf_time);
 
