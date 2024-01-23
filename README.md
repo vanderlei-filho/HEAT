@@ -30,37 +30,23 @@ make jacobi_scr
 make all
 ```
 
-## Configuring a file with flags
-
-To use flags with the application, you can use the `flags.conf` file and pass it as an argument when running the application. A basic set of flags is already in the file, but you can change them as you wish.
-Use the `execute.sh` script to run the application with a flag file.
-
 ## Running the versions
 
 After compile with `make`, Examples of how to run the different versions are below.
 
-### Running with execute.sh
-There is a script to run the application that enables the use of a flag file and other options. The script is `execute.sh` and it is located in the root directory of the project. To run the application with the script, use the following command:
-
-```sh
-./execute.sh <binary> < -f <flag_file> | -np <NP> -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--hostfile=<hostfile>] [--debug] [--use-scr-need-checkpoint] [--run-until-success] [--retry-delay <delay_time>] >
-```
-
-### Running manually
-
-#### Running the NOFT version
+### Running the NOFT version
 
 ```sh
 mpirun -np <NP> jacobi_noft -p <NR> -q <NC> -NB <QC> [-MB <QR>]
 ```
 
-#### Running the ULFM version
+### Running the ULFM version
 
 ```sh
 mpirun --with-ft=ulfm --oversubscribe -np <NP> jacobi_ulfm -p <NR> -q <NC> -NB <QC> [-MB <QR>]
 ```
 
-#### Running the SCR version
+### Running the SCR version
 
 ```sh
 mpirun -np <NP> jacobi_scr -p <NR> -q <NC> -NB <QC> [-MB <QR>] [--debug] [--use-scr-need-checkpoint]
@@ -82,7 +68,6 @@ Flags:
 - NC: Number of processes per column
 - QC: Number of columns
 - QR: Number of rows
-- hostfile: Hostfile for mpirun
 
 ## Cleaning
 
