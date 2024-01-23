@@ -69,9 +69,11 @@ void terminate_aws_instance(const char *instance_name)
 
             snprintf(command, sizeof(command), "aws ec2 terminate-instances --instance-ids %s > /dev/null", instance_id);
 
-            system(command);
-
+            // write to file before terminating the instance to confirm that
+            // the file will be written
             write_terminated_instances_file(instance_name);
+
+            system(command);
         }
         else
         {
