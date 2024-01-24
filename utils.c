@@ -8,7 +8,7 @@
 #define MAX_ID_LEN 31   // The maximum length of an instance ID
 #define MAX_NAME_LEN 63 // The maximum length of an instance name
 #define INSTANCE_ID_FILE "instance_id.txt"
-#define TERMINATED_INSTANCES_FILE "terminated_instances"
+#define TERMINATED_INSTANCES_FILE "terminated_instances.txt"
 
 /**
  * Writes the name of the instance that was terminated to a file.
@@ -19,10 +19,10 @@ void write_terminated_instances_file(const char *instance_name)
 {
     FILE *fd;
 
-    fd = fopen(TERMINATED_INSTANCES_FILE, "ab");
+    fd = fopen(TERMINATED_INSTANCES_FILE, "a");
     if (NULL != fd)
     {
-        fwrite(instance_name, sizeof(char), MAX_NAME_LEN + 1, fd);
+        fprintf(fd, "%s\n", instance_name);
         fclose(fd);
     }
 }
@@ -96,10 +96,10 @@ int was_instance_already_terminated(const char *instance_name)
 
     int was_terminated = 0;
 
-    fd = fopen(TERMINATED_INSTANCES_FILE, "rb");
+    fd = fopen(TERMINATED_INSTANCES_FILE, "r");
     if (NULL != fd)
     {
-        while (fread(instance_read, sizeof(char), MAX_NAME_LEN + 1, fd) == MAX_NAME_LEN + 1)
+        while (fscanf(fd, "%s", instance_read) != EOF)
         {
             if (strcmp(instance_read, instance_name) == 0)
             {
@@ -110,4 +110,13 @@ int was_instance_already_terminated(const char *instance_name)
         fclose(fd);
     }
     return was_terminated;
+}
+
+/**
+ * Removes the file that contains the names of the instances that were
+ * terminated.
+ */
+void remove_terminated_instances_file()
+{
+    remove(TERMINATED_INSTANCES_FILE);
 }
