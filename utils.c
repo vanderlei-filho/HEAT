@@ -99,8 +99,13 @@ int was_instance_already_terminated(const char *instance_name)
     fd = fopen(TERMINATED_INSTANCES_FILE, "r");
     if (NULL != fd)
     {
-        while (fscanf(fd, "%s", instance_read) != EOF)
+        while (fgets(instance_read, sizeof(instance_read), fd) != NULL)
         {
+            size_t length = strlen(instance_read);
+            if (length > 0 && instance_read[length - 1] == '\n') {
+                instance_read[length - 1] = '\0';
+            }
+
             if (strcmp(instance_read, instance_name) == 0)
             {
                 was_terminated = 1;
