@@ -12,7 +12,7 @@
 
 static int MPIX_Comm_replace(MPI_Comm comm, MPI_Comm *newcomm);
 
-static int rank = MPI_PROC_NULL, verbose = 1;
+static int rank = MPI_PROC_NULL, verbose = 0;
 static char estr[MPI_MAX_ERROR_STRING]=""; 
 static int strl;
 

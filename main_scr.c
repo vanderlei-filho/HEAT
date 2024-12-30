@@ -6,9 +6,8 @@
 #include <time.h>
 #include "jacobi.h"
 
-int scr_debug = 0;
+int debug = 0;
 int use_scr_need_checkpoint = 0;
-int return_try_restart_retval;
 
 /**
  * Generates a border array of random values in the range of -0.5 to 0.5.
@@ -122,7 +121,7 @@ int main(int argc, char *argv[])
         }
         if (!strcmp(argv[i], "--debug"))
         {
-            scr_debug = 1;
+            debug = 1;
             continue;
         }
         if (!strcmp(argv[i], "--use-scr-need-checkpoint"))
