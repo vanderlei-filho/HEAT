@@ -173,8 +173,8 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
   do {
     if (save_output) {
       char filename[256];
-      snprintf(filename, sizeof(filename), "rank_%d_iteration_%04d.png", rank,
-               iter);
+      snprintf(filename, sizeof(filename), "pngs/rank_%d_iteration_%04d.png",
+               rank, iter);
       create_png(filename, om, NB, MB);
     }
 
