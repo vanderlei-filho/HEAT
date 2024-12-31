@@ -16,7 +16,7 @@
 #define SEND_SOUTH(p) (((TYPE *)(p)) + (NB + 2) * (MB) + 1)
 
 int jacobi_cpu(TYPE *om, int NB, int MB, int P, int Q, MPI_Comm comm,
-               TYPE epsilon, int save_output, int max_iter);
+               TYPE epsilon, int max_iter, int save_output);
 int preinit_jacobi_cpu(void);
 
 #endif /* JACOBI_HEADER_H */

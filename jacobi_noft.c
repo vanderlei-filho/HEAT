@@ -140,7 +140,7 @@ int preinit_jacobi_cpu(void) {
 }
 
 int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
-               TYPE epsilon, int save_output, int max_iter) {
+               TYPE epsilon, int max_iter, int save_output) {
   int i, iter = 0;
   int rank, size, ew_rank, ew_size, ns_rank, ns_size;
   TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west,
@@ -225,11 +225,6 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
     om = nm;
     nm = tmpm; /* swap the 2 matrices */
     iter++;
-
-    if (rank == 0) {
-      printf("iter=%d; max_iter=%d\n", iter, max_iter);
-    }
-
   } while (iter < max_iter); // && (sqrt(diff_norm) > epsilon)
 
   twf = MPI_Wtime() - start;
