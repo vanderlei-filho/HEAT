@@ -80,7 +80,7 @@ int init_matrix(TYPE *matrix, const TYPE *border, int nb, int mb) {
  */
 int main(int argc, char *argv[]) {
   int i, rc, size, rank, NB = -1, MB = -1, P = -1, Q = -1, save_output = 0,
-                         max_iter = 0;
+                         max_iter = -1;
   TYPE *om, *som, *border, epsilon = 1e-6;
   MPI_Comm parent;
 
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
   if (MB == -1) {
     MB = NB;
   }
-  if (max_iter == 0) {
+  if (max_iter == -1) {
     printf("Missing the maximum number of iterations (-max_iter #)\n");
     exit(-1);
   }
