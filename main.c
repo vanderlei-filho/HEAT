@@ -139,6 +139,8 @@ int main(int argc, char *argv[]) {
     exit(-1);
   }
 
+  printf("P = %d, Q = %d, NB = %d, MB = %d, max_iter = %d, save_output = %d\n",
+         P, Q, NB, MB, max_iter, save_output);
   // Initialize the Jacobi CPU
   preinit_jacobi_cpu();
 
