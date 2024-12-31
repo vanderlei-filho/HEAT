@@ -110,10 +110,11 @@ int main(int argc, char *argv[]) {
     if (!strcmp(argv[i], "-max_iter")) {
       i++;
       max_iter = atoi(argv[i]);
+      continue;
     }
     if (!strcmp(argv[i], "-save_output")) {
-      i++;
       save_output = 1;
+      continue;
     }
   }
 
