@@ -1,6 +1,7 @@
 #include "jacobi.h"
 #include <math.h>
 #include <mpi.h>
+#include <png.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -28,6 +29,62 @@ void print_timings(MPI_Comm scomm, int rank, double twf) {
            "# MIN: %.2f ms \t MAX: %.2f ms\n",
            mtwf * 1000, Mtwf * 1000);
   }
+}
+
+void create_png(const char *filename, TYPE *matrix, int nb, int mb) {
+  FILE *fp = fopen(filename, "wb");
+  if (!fp) {
+    perror("Failed to open file for PNG output");
+    return;
+  }
+
+  png_structp png =
+      png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_infop info = png_create_info_struct(png);
+  if (!png || !info) {
+    fclose(fp);
+    return;
+  }
+
+  if (setjmp(png_jmpbuf(png))) {
+    fclose(fp);
+    png_destroy_write_struct(&png, &info);
+    return;
+  }
+
+  png_init_io(png, fp);
+
+  png_set_IHDR(png, info, nb, mb, 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+  png_bytep *row_pointers = malloc(sizeof(png_bytep) * mb);
+  for (int j = 0; j < mb; j++) {
+    row_pointers[j] = malloc(sizeof(png_byte) * 3 * nb);
+    for (int i = 0; i < nb; i++) {
+      int pos = (j + 1) * (nb + 2) + 1 + i; // Skip the ghost rows/columns
+      double value = matrix[pos];
+      double normalized = (value + 20) / (20 + 20);
+      normalized = normalized < 0 ? 0 : (normalized > 1 ? 1 : normalized);
+
+      int r = (int)(normalized * 255);
+      int g = 0;
+      int b = 255 - r;
+
+      row_pointers[j][i * 3 + 0] = r; // Red
+      row_pointers[j][i * 3 + 1] = g; // Green
+      row_pointers[j][i * 3 + 2] = b; // Blue
+    }
+  }
+
+  png_set_rows(png, info, row_pointers);
+  png_write_png(png, info, PNG_TRANSFORM_IDENTITY, NULL);
+
+  for (int j = 0; j < mb; j++) {
+    free(row_pointers[j]);
+  }
+  free(row_pointers);
+  png_destroy_write_struct(&png, &info);
+  fclose(fp);
 }
 
 /**
@@ -83,7 +140,7 @@ int preinit_jacobi_cpu(void) {
 }
 
 int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
-               TYPE epsilon) {
+               TYPE epsilon, int save_output) {
   int i, iter = 0;
   int rank, size, ew_rank, ew_size, ns_rank, ns_size;
   TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west,
@@ -159,6 +216,12 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
     om = nm;
     nm = tmpm; /* swap the 2 matrices */
     iter++;
+
+    if (save_output) {
+      char filename[256];
+      snprintf(filename, sizeof(filename), "iteration_%04d.png", iter);
+      create_png(filename, om, NB, MB);
+    }
   } while ((iter < MAX_ITER) && (sqrt(diff_norm) > epsilon));
 
   twf = MPI_Wtime() - start;

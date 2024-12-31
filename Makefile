@@ -10,14 +10,11 @@ LDFLAGS= $(MPILIB) -g
 
 LINK=$(LD)
 
-APPS=jacobi_noft jacobi_ulfm
+APPS=jacobi_noft
 
 all: $(APPS)
 
 jacobi_noft: jacobi_noft.o main.o
-	$(LINK) -o $@ $^ -lm
-
-jacobi_ulfm: jacobi_ulfm.o main.o
 	$(LINK) -o $@ $^ -lm
 
 %.o: %.c jacobi.h
