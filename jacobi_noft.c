@@ -171,6 +171,10 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
 
   start = MPI_Wtime();
   do {
+    if (rank == 0) {
+      printf("Iteration %d: diff_norm = %f, epsilon = %f\n", iter,
+             sqrt(diff_norm), epsilon);
+    }
     if (save_output) {
       char filename[256];
       snprintf(filename, sizeof(filename), "pngs/rank_%d_iteration_%04d.png",
@@ -217,16 +221,16 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
 
     MPI_Allreduce(MPI_IN_PLACE, &diff_norm, 1, MPI_TYPE, MPI_SUM, comm);
 
-    if (rank == 0) {
-      printf("Iteration %d: diff_norm = %f, epsilon = %f\n", iter,
-             sqrt(diff_norm), epsilon);
-    }
-
     tmpm = om;
     om = nm;
     nm = tmpm; /* swap the 2 matrices */
     iter++;
-  } while ((iter < max_iter) && (sqrt(diff_norm) > epsilon));
+
+    if (rank == 0) {
+      printf("iter=%d; max_iter=%d\n", iter, max_iter);
+    }
+
+  } while (iter < max_iter); // && (sqrt(diff_norm) > epsilon)
 
   twf = MPI_Wtime() - start;
   print_timings(comm, rank, twf);
