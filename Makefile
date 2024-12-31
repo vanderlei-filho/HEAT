@@ -15,7 +15,7 @@ APPS=jacobi_noft
 all: $(APPS)
 
 jacobi_noft: jacobi_noft.o main.o
-	$(LINK) -o $@ $^ -lm
+	$(LINK) -o $@ $^ -lm -lpng
 
 %.o: %.c jacobi.h
 	$(CC) -c $(CFLAGS) -o $@ $<
