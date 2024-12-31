@@ -140,7 +140,7 @@ int preinit_jacobi_cpu(void) {
 }
 
 int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
-               TYPE epsilon, int save_output) {
+               TYPE epsilon, int save_output, int max_iter) {
   int i, iter = 0;
   int rank, size, ew_rank, ew_size, ns_rank, ns_size;
   TYPE *om, *nm, *tmpm, *send_east, *send_west, *recv_east, *recv_west,
@@ -171,6 +171,13 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
 
   start = MPI_Wtime();
   do {
+    if (save_output) {
+      char filename[256];
+      snprintf(filename, sizeof(filename), "rank_%d_iteration_%04d.png", rank,
+               iter);
+      create_png(filename, om, NB, MB);
+    }
+
     /* post receives from the neighbors */
     if (0 != ns_rank)
       MPI_Irecv(RECV_NORTH(om), NB, MPI_TYPE, ns_rank - 1, 0, ns, &req[0]);
@@ -216,13 +223,7 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
     om = nm;
     nm = tmpm; /* swap the 2 matrices */
     iter++;
-
-    if (save_output) {
-      char filename[256];
-      snprintf(filename, sizeof(filename), "iteration_%04d.png", iter);
-      create_png(filename, om, NB, MB);
-    }
-  } while ((iter < MAX_ITER) && (sqrt(diff_norm) > epsilon));
+  } while ((iter < max_iter) && (sqrt(diff_norm) > epsilon));
 
   twf = MPI_Wtime() - start;
   print_timings(comm, rank, twf);

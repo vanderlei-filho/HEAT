@@ -79,7 +79,8 @@ int init_matrix(TYPE *matrix, const TYPE *border, int nb, int mb) {
  * The main function for the Jacobi solver program.
  */
 int main(int argc, char *argv[]) {
-  int i, rc, size, rank, NB = -1, MB = -1, P = -1, Q = -1, save_output = 0;
+  int i, rc, size, rank, NB = -1, MB = -1, P = -1, Q = -1, save_output = 0,
+                         max_iter = 0;
   TYPE *om, *som, *border, epsilon = 1e-6;
   MPI_Comm parent;
 
@@ -106,6 +107,10 @@ int main(int argc, char *argv[]) {
       MB = atoi(argv[i]);
       continue;
     }
+    if (!strcmp(argv[i], "-max_iter")) {
+      i++;
+      max_iter = atoi(argv[i]);
+    }
     if (!strcmp(argv[i], "-save_output")) {
       i++;
       save_output = 1;
@@ -127,6 +132,10 @@ int main(int argc, char *argv[]) {
   }
   if (MB == -1) {
     MB = NB;
+  }
+  if (max_iter == 0) {
+    printf("Missing the maximum number of iterations (-max_iter #)\n");
+    exit(-1);
   }
 
   // Initialize the Jacobi CPU
@@ -157,8 +166,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_set_errhandler(MPI_COMM_WORLD, MPI_ERRORS_RETURN);
 
   // Run the Jacobi CPU solver
-  rc = jacobi_cpu(om, NB, MB, P, Q, MPI_COMM_WORLD, 0 /* no epsilon */,
-                  save_output);
+  rc = jacobi_cpu(om, NB, MB, P, Q, MPI_COMM_WORLD, 0, max_iter, save_output);
   if (rc < 0) {
     printf("The CPU Jacobi failed\n");
     goto cleanup_and_be_gone;

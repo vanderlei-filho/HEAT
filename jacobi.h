@@ -6,8 +6,6 @@
 #define TYPE double
 #define MPI_TYPE MPI_DOUBLE
 
-#define MAX_ITER 67
-
 /**
  * Helper macros to compute the displacement of the
  * buffers for the north and south neighbors.
@@ -18,7 +16,7 @@
 #define SEND_SOUTH(p) (((TYPE *)(p)) + (NB + 2) * (MB) + 1)
 
 int jacobi_cpu(TYPE *om, int NB, int MB, int P, int Q, MPI_Comm comm,
-               TYPE epsilon, int save_output);
+               TYPE epsilon, int save_output, int max_iter);
 int preinit_jacobi_cpu(void);
 
 #endif /* JACOBI_HEADER_H */
