@@ -18,15 +18,11 @@ char **gargv = NULL;
  */
 int generate_border(TYPE *border, size_t nb_elems) {
   if (!border) {
-    return -1; // Return error code if the input pointer is NULL
+    return -1;
   }
-
-  srand(time(NULL)); // Seed the random number generator (ideally only once)
-
   for (size_t i = 0; i < nb_elems; i++) {
-    border[i] = (TYPE)((rand() / (double)RAND_MAX) - 0.5);
+    border[i] = 100.0;
   }
-
   return 0;
 }
 
