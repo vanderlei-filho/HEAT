@@ -216,9 +216,12 @@ int jacobi_cpu(TYPE *matrix, int NB, int MB, int P, int Q, MPI_Comm comm,
     diff_norm = SOR1(nm, om, NB, MB);
 
     MPI_Allreduce(MPI_IN_PLACE, &diff_norm, 1, MPI_TYPE, MPI_SUM, comm);
-    if (0 == rank) {
-      printf("Iteration %4d norm %f\n", iter, sqrtf(diff_norm));
+
+    if (rank == 0) {
+      printf("Iteration %d: diff_norm = %f, epsilon = %f\n", iter,
+             sqrt(diff_norm), epsilon);
     }
+
     tmpm = om;
     om = nm;
     nm = tmpm; /* swap the 2 matrices */
