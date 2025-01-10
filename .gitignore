@@ -1,6 +1,51 @@
-jacobi_noft
-jacobi_ulfm
-jacobi_noft.o
-jacobi_ulfm.o
-main.o
-.clangd
+# Ignore build artifacts
+/build/
+/bin/
+/obj/
+
+# Ignore CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Ignore compiled binaries
+*.o
+*.so
+*.a
+*.out
+*.exe
+*.dll
+
+# Ignore log files
+*.log
+
+# Ignore editor-specific files
+*.swp
+*.swo
+*.vim
+.idea/
+.vscode/
+*.DS_Store
+
+# Ignore temporary and backup files
+*~
+*.bak
+*.tmp
+*.old
+
+# Ignore generated files
+compile_commands.json
+
+# Ignore coverage reports
+*.gcda
+*.gcno
+*.gcov
+
+# Ignore generated PNGs or images
+*.png
+
+# Ignore custom directories (if applicable)
+output/
+data/
+workspace/
