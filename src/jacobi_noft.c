@@ -33,7 +33,7 @@ TYPE SOR1(TYPE *nm, TYPE *om, int nb, int mb) {
   }
 
   volatile double dummy = 0.0;
-  for (int k = 0; k < 1000; k++) {
+  for (int k = 0; k < 100000; k++) {
     dummy += sin(k) * cos(k);
   }
   return norm;
