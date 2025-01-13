@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 void print_timings(MPI_Comm scomm, int rank, double twf) {
   double mtwf, Mtwf;
@@ -29,12 +30,8 @@ TYPE SOR1(TYPE *nm, TYPE *om, int nb, int mb) {
                                    (nm[pos - 1] + om[pos + 1] +
                                     nm[pos - (nb + 2)] + om[pos + (nb + 2)]);
       norm += (nm[pos] - om[pos]) * (nm[pos] - om[pos]);
+      usleep(100);
     }
-  }
-
-  volatile double dummy = 0.0;
-  for (int k = 0; k < 100000; k++) {
-    dummy += sin(k) * cos(k);
   }
   return norm;
 }
