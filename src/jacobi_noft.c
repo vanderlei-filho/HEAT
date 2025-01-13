@@ -30,7 +30,7 @@ TYPE SOR1(TYPE *nm, TYPE *om, int nb, int mb) {
                                    (nm[pos - 1] + om[pos + 1] +
                                     nm[pos - (nb + 2)] + om[pos + (nb + 2)]);
       norm += (nm[pos] - om[pos]) * (nm[pos] - om[pos]);
-      usleep(100);
+      usleep(5);
     }
   }
   return norm;
